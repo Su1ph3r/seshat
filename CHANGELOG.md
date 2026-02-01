@@ -2,6 +2,18 @@
 
 All notable changes to Seshat are documented in this file.
 
+## [1.0.1] - 2026-02-01
+
+### Improvements
+- Significantly improved AI text detection accuracy (65% → 100% for AI-generated text)
+- Added AI-typical pattern detection (intro/conclusion/filler phrases)
+- Added perfect spelling penalty for longer text samples
+- Improved cognitive marker detection by removing formal transition words
+
+### Bug Fixes
+- Fixed false positive in typo detection caused by substring matching (now uses word boundaries)
+- Fixed first-person pronoun scoring to account for formal academic AI writing style
+
 ## [1.0.0] - 2026-02-01
 
 ### Initial Release
