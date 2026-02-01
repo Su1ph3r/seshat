@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Analysis Results{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>Analysis Results</h1>
+        <a href="{{ url_for('analyze') }}" class="btn btn-secondary">New Analysis</a>
+    </header>
+
+    <div class="results-grid">
+        <div class="card">
+            <h2>Text Analyzed</h2>
+            <div class="text-preview">{{ text }}</div>
+            <dl class="info-list horizontal">
+                <div>
+                    <dt>Words</dt>
+                    <dd>{{ result.word_count }}</dd>
+                </div>
+                <div>
+                    <dt>Sentences</dt>
+                    <dd>{{ result.sentence_count }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        {% if comparison %}
+        <div class="card">
+            <h2>Profile Comparison</h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Profile</th>
+                        <th>Score</th>
+                        <th>Confidence</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in comparison[:5] %}
+                    <tr class="{% if loop.first %}highlight{% endif %}">
+                        <td>{{ r.profile_name }}</td>
+                        <td>
+                            <div class="score-bar">
+                                <div class="score-fill" style="width: {{ r.overall_score * 100 }}%"></div>
+                                <span class="score-text">{{ "%.1f%%"|format(r.overall_score * 100) }}</span>
+                            </div>
+                        </td>
+                        <td class="confidence-{{ r.confidence }}">{{ r.confidence }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if comparison %}
+            <div class="best-match">
+                <strong>Best Match:</strong> {{ comparison[0].profile_name }} with {{ "%.1f%%"|format(comparison[0].overall_score * 100) }} similarity
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h2>Lexical Features</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>Type-Token Ratio</dt>
+                    <dd>{{ "%.4f"|format(result.lexical_features.get('type_token_ratio', 0)) }}</dd>
+                </div>
+                <div>
+                    <dt>Average Word Length</dt>
+                    <dd>{{ "%.2f"|format(result.lexical_features.get('avg_word_length', 0)) }} chars</dd>
+                </div>
+                <div>
+                    <dt>Vocabulary Richness (Yule's K)</dt>
+                    <dd>{{ "%.2f"|format(result.lexical_features.get('yules_k', 0)) }}</dd>
+                </div>
+                <div>
+                    <dt>Hapax Legomena</dt>
+                    <dd>{{ result.lexical_features.get('hapax_legomena', 0) }} words</dd>
+                </div>
+                <div>
+                    <dt>Long Words (7+ chars)</dt>
+                    <dd>{{ "%.1f%%"|format(result.lexical_features.get('long_word_pct', 0) * 100) }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h2>Function Words</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>First Person Singular (I, me, my)</dt>
+                    <dd>{{ "%.2f%%"|format(result.function_word_features.get('first_person_singular_ratio', 0) * 100) }}</dd>
+                </div>
+                <div>
+                    <dt>First Person Plural (we, us, our)</dt>
+                    <dd>{{ "%.2f%%"|format(result.function_word_features.get('first_person_plural_ratio', 0) * 100) }}</dd>
+                </div>
+                <div>
+                    <dt>Second Person (you, your)</dt>
+                    <dd>{{ "%.2f%%"|format(result.function_word_features.get('second_person_ratio', 0) * 100) }}</dd>
+                </div>
+                <div>
+                    <dt>Articles (a, an, the)</dt>
+                    <dd>{{ "%.2f%%"|format(result.function_word_features.get('article_ratio', 0) * 100) }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h2>Punctuation Patterns</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>Commas per 1k words</dt>
+                    <dd>{{ "%.1f"|format(result.punctuation_features.get('comma_per_1k', 0)) }}</dd>
+                </div>
+                <div>
+                    <dt>Question Ratio</dt>
+                    <dd>{{ "%.1f%%"|format(result.punctuation_features.get('terminal_question_ratio', 0) * 100) }}</dd>
+                </div>
+                <div>
+                    <dt>Exclamation Ratio</dt>
+                    <dd>{{ "%.1f%%"|format(result.punctuation_features.get('terminal_exclamation_ratio', 0) * 100) }}</dd>
+                </div>
+                <div>
+                    <dt>Ellipsis Count</dt>
+                    <dd>{{ result.punctuation_features.get('ellipsis_count', 0) }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h2>Syntactic Features</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>Avg Sentence Length</dt>
+                    <dd>{{ "%.1f"|format(result.syntactic_features.get('avg_sentence_length_words', 0)) }} words</dd>
+                </div>
+                <div>
+                    <dt>Sentence Length Std Dev</dt>
+                    <dd>{{ "%.1f"|format(result.syntactic_features.get('sentence_length_std', 0)) }}</dd>
+                </div>
+                <div>
+                    <dt>Max Sentence Length</dt>
+                    <dd>{{ result.syntactic_features.get('max_sentence_length', 0) }} words</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="card">
+            <h2>All Features</h2>
+            <div class="feature-export">
+                <details>
+                    <summary>View all {{ result.all_features|length }} extracted features</summary>
+                    <table class="table table-small">
+                        <thead>
+                            <tr><th>Feature</th><th>Value</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for key, value in result.all_features.items() %}
+                            <tr>
+                                <td>{{ key }}</td>
+                                <td>{% if value is number %}{{ "%.4f"|format(value) }}{% else %}{{ value }}{% endif %}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

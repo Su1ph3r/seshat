@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Comparison Results{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>Comparison Results</h1>
+        <a href="{{ url_for('compare') }}" class="btn btn-secondary">New Comparison</a>
+    </header>
+
+    <div class="comparison-results">
+        <div class="card">
+            <h2>Similarity Score</h2>
+            <div class="big-score">
+                <div class="score-circle {{ 'high' if result.cosine_similarity > 0.8 else 'medium' if result.cosine_similarity > 0.6 else 'low' }}">
+                    {{ "%.1f%%"|format(result.cosine_similarity * 100) }}
+                </div>
+                <div class="score-label">Cosine Similarity</div>
+            </div>
+
+            <div class="assessment {% if result.cosine_similarity > 0.8 %}likely{% elif result.cosine_similarity > 0.6 %}possible{% else %}unlikely{% endif %}">
+                {% if result.cosine_similarity > 0.8 %}
+                    <span class="icon">&#10003;</span> Likely Same Author
+                {% elif result.cosine_similarity > 0.6 %}
+                    <span class="icon">?</span> Possibly Same Author
+                {% else %}
+                    <span class="icon">&#10005;</span> Likely Different Authors
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Comparison Details</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>Common Features Compared</dt>
+                    <dd>{{ result.common_features }}</dd>
+                </div>
+                <div>
+                    <dt>Euclidean Distance</dt>
+                    <dd>{{ "%.4f"|format(result.get('euclidean_distance', 0)) }}</dd>
+                </div>
+                <div>
+                    <dt>Manhattan Distance</dt>
+                    <dd>{{ "%.4f"|format(result.get('manhattan_distance', 0)) }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <div class="compare-texts">
+            <div class="card">
+                <h2>Text 1</h2>
+                <div class="text-preview">{{ text1 }}</div>
+            </div>
+            <div class="card">
+                <h2>Text 2</h2>
+                <div class="text-preview">{{ text2 }}</div>
+            </div>
+        </div>
+
+        {% if result.feature_differences %}
+        <div class="card full-width">
+            <h2>Feature Differences</h2>
+            <p class="help-text">Features with the largest differences between texts</p>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Feature</th>
+                        <th>Text 1</th>
+                        <th>Text 2</th>
+                        <th>Difference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for diff in result.feature_differences[:15] %}
+                    <tr>
+                        <td>{{ diff.feature }}</td>
+                        <td>{{ "%.4f"|format(diff.value1) }}</td>
+                        <td>{{ "%.4f"|format(diff.value2) }}</td>
+                        <td class="{% if diff.abs_diff > 0.5 %}high-diff{% endif %}">{{ "%.4f"|format(diff.abs_diff) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

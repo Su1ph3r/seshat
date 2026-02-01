@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Psychological Profiling{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>Psychological Profiling</h1>
+        <p class="subtitle">Analyze Big Five personality traits, emotional tone, and cognitive style</p>
+    </header>
+
+    <div class="card">
+        <form method="POST" class="form">
+            <div class="form-group">
+                <label for="text">Text to Analyze <span class="required">*</span></label>
+                <textarea id="text" name="text" rows="12" required placeholder="Paste the text you want to analyze for psychological patterns (minimum 50 characters, 200+ words recommended)"></textarea>
+                <span class="help-text">Longer texts produce more accurate results. Minimum 50 characters required.</span>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Analyze Psychology</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card info-card">
+        <h2>What This Analyzes</h2>
+        <div class="info-grid">
+            <div>
+                <h3>Big Five Personality</h3>
+                <ul>
+                    <li><strong>Openness:</strong> Creativity, curiosity, intellectual interests</li>
+                    <li><strong>Conscientiousness:</strong> Organization, dependability, discipline</li>
+                    <li><strong>Extraversion:</strong> Social energy, assertiveness, positive emotions</li>
+                    <li><strong>Agreeableness:</strong> Cooperation, trust, helpfulness</li>
+                    <li><strong>Neuroticism:</strong> Emotional instability, anxiety, moodiness</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Emotional Tone</h3>
+                <ul>
+                    <li>Overall sentiment (positive/negative)</li>
+                    <li>Emotional intensity</li>
+                    <li>Dominant emotion</li>
+                    <li>Authenticity indicators</li>
+                </ul>
+            </div>
+            <div>
+                <h3>Cognitive Style</h3>
+                <ul>
+                    <li>Analytical thinking score</li>
+                    <li>Cognitive complexity</li>
+                    <li>Time orientation (past/present/future)</li>
+                    <li>Thinking style (analytical/intuitive)</li>
+                </ul>
+            </div>
+        </div>
+        <p class="disclaimer">Note: These are probabilistic estimates based on linguistic correlations, not clinical diagnoses.</p>
+    </div>
+</div>
+{% endblock %}

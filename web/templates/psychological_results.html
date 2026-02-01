@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Psychological Profile Results{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>Psychological Profile</h1>
+        <a href="{{ url_for('psychological') }}" class="btn btn-secondary">New Analysis</a>
+    </header>
+
+    <div class="card">
+        <h2>Text Analyzed</h2>
+        <div class="text-preview">{{ text }}</div>
+    </div>
+
+    <div class="psych-results">
+        <div class="card">
+            <h2>Big Five Personality Traits</h2>
+            <div class="trait-bars">
+                {% set traits = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism'] %}
+                {% for trait in traits %}
+                {% set data = personality.get(trait, {}) %}
+                {% set score = data.get('score', 0.5) %}
+                <div class="trait-row">
+                    <div class="trait-name">{{ trait|capitalize }}</div>
+                    <div class="trait-bar-container">
+                        <div class="trait-bar" style="width: {{ score * 100 }}%"></div>
+                        <span class="trait-score">{{ "%.2f"|format(score) }}</span>
+                    </div>
+                    <div class="trait-level">
+                        {% if score >= 0.7 %}High{% elif score >= 0.4 %}Moderate{% else %}Low{% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if personality.get('dominant_traits') %}
+            <div class="dominant-traits">
+                <strong>Dominant Traits:</strong> {{ personality.dominant_traits|join(', ')|capitalize }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>Emotional Tone</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>Overall Sentiment</dt>
+                    <dd class="sentiment-{{ emotional.get('sentiment_label', 'neutral') }}">
+                        {{ emotional.get('sentiment_label', 'Neutral')|capitalize }}
+                        ({{ "%.2f"|format(emotional.get('sentiment_score', 0)) }})
+                    </dd>
+                </div>
+                <div>
+                    <dt>Emotional Intensity</dt>
+                    <dd>
+                        <div class="intensity-bar">
+                            <div class="intensity-fill" style="width: {{ emotional.get('emotional_intensity', 0) * 100 }}%"></div>
+                        </div>
+                        {{ "%.2f"|format(emotional.get('emotional_intensity', 0)) }}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Dominant Emotion</dt>
+                    <dd>{{ emotional.get('dominant_emotion', 'Neutral')|capitalize }}</dd>
+                </div>
+                <div>
+                    <dt>Authenticity Score</dt>
+                    <dd>{{ "%.2f"|format(emotional.get('authenticity_score', 0.5)) }}</dd>
+                </div>
+            </dl>
+
+            {% if emotional.get('emotion_breakdown') %}
+            <h3>Emotion Breakdown</h3>
+            <div class="emotion-grid">
+                {% for emotion, value in emotional.emotion_breakdown.items() %}
+                <div class="emotion-item">
+                    <span class="emotion-name">{{ emotion|capitalize }}</span>
+                    <span class="emotion-value">{{ "%.2f"|format(value) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>Cognitive Style</h2>
+            <dl class="info-list">
+                <div>
+                    <dt>Analytical Score</dt>
+                    <dd>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: {{ cognitive.get('analytical_score', 0) * 100 }}%"></div>
+                        </div>
+                        {{ "%.2f"|format(cognitive.get('analytical_score', 0)) }}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Cognitive Complexity</dt>
+                    <dd>
+                        <div class="score-bar">
+                            <div class="score-fill" style="width: {{ cognitive.get('cognitive_complexity', 0) * 100 }}%"></div>
+                        </div>
+                        {{ "%.2f"|format(cognitive.get('cognitive_complexity', 0)) }}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Time Orientation</dt>
+                    <dd>{{ cognitive.get('time_orientation', 'Balanced')|capitalize }}</dd>
+                </div>
+                <div>
+                    <dt>Cognitive Style</dt>
+                    <dd>{{ cognitive.get('cognitive_style', 'Balanced')|capitalize }}</dd>
+                </div>
+                <div>
+                    <dt>Certainty Level</dt>
+                    <dd>{{ cognitive.get('certainty_level', 'Moderate')|capitalize }}</dd>
+                </div>
+            </dl>
+        </div>
+    </div>
+
+    <div id="personality-chart" class="chart-container"></div>
+</div>
+
+{% block scripts %}
+<script>
+var traits = ['Openness', 'Conscientiousness', 'Extraversion', 'Agreeableness', 'Neuroticism'];
+var scores = [
+    {{ personality.get('openness', {}).get('score', 0.5) }},
+    {{ personality.get('conscientiousness', {}).get('score', 0.5) }},
+    {{ personality.get('extraversion', {}).get('score', 0.5) }},
+    {{ personality.get('agreeableness', {}).get('score', 0.5) }},
+    {{ personality.get('neuroticism', {}).get('score', 0.5) }}
+];
+
+var data = [{
+    type: 'scatterpolar',
+    r: scores.concat([scores[0]]),
+    theta: traits.concat([traits[0]]),
+    fill: 'toself',
+    name: 'Personality Profile',
+    fillcolor: 'rgba(74, 144, 217, 0.3)',
+    line: { color: 'rgba(74, 144, 217, 1)' }
+}];
+
+var layout = {
+    polar: {
+        radialaxis: {
+            visible: true,
+            range: [0, 1]
+        }
+    },
+    title: 'Big Five Personality Radar',
+    showlegend: false
+};
+
+Plotly.newPlot('personality-chart', data, layout);
+</script>
+{% endblock %}
+{% endblock %}

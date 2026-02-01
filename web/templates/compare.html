@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Compare Texts{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>Compare Texts</h1>
+        <p class="subtitle">Compare two texts for authorship similarity</p>
+    </header>
+
+    <div class="card">
+        <form method="POST" class="form">
+            <div class="compare-inputs">
+                <div class="form-group">
+                    <label for="text1">Text 1 <span class="required">*</span></label>
+                    <textarea id="text1" name="text1" rows="10" required placeholder="Paste the first text sample"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="text2">Text 2 <span class="required">*</span></label>
+                    <textarea id="text2" name="text2" rows="10" required placeholder="Paste the second text sample"></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Compare</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

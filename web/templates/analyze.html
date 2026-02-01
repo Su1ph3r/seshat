@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Analyze Text{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>Analyze Text</h1>
+        <p class="subtitle">Extract stylometric features and compare against author profiles</p>
+    </header>
+
+    <div class="card">
+        <form method="POST" enctype="multipart/form-data" class="form">
+            <div class="form-group">
+                <label for="text">Text to Analyze <span class="required">*</span></label>
+                <textarea id="text" name="text" rows="12" placeholder="Paste or type the text you want to analyze (minimum 10 characters)"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="file">Or Upload a File</label>
+                <input type="file" id="file" name="file" accept=".txt,.md">
+                <span class="help-text">Upload a .txt or .md file</span>
+            </div>
+
+            {% if profiles %}
+            <div class="form-group">
+                <label>Compare Against Profiles (Optional)</label>
+                <div class="checkbox-group">
+                    {% for p in profiles %}
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="profiles" value="{{ p.name }}">
+                        {{ p.name }} ({{ p.sample_count }} samples)
+                    </label>
+                    {% endfor %}
+                </div>
+                <span class="help-text">Select profiles to compare this text against</span>
+            </div>
+            {% endif %}
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Analyze</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

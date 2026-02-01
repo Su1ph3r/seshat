@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}AI Detection Results{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>AI Detection Results</h1>
+        <a href="{{ url_for('ai_detection') }}" class="btn btn-secondary">New Analysis</a>
+    </header>
+
+    <div class="card">
+        <h2>Text Analyzed</h2>
+        <div class="text-preview">{{ text }}</div>
+    </div>
+
+    <div class="ai-results">
+        <div class="card classification-card">
+            <h2>Classification</h2>
+            {% set classification = result.get('classification', 'unknown') %}
+            {% set ai_prob = result.get('ai_probability', 0.5) %}
+
+            <div class="classification-display {{ 'human' if 'human' in classification else 'ai' if 'ai' in classification else 'uncertain' }}">
+                <div class="classification-icon">
+                    {% if 'human' in classification %}
+                    <svg viewBox="0 0 24 24" width="64" height="64"><path fill="currentColor" d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg>
+                    {% elif 'ai' in classification %}
+                    <svg viewBox="0 0 24 24" width="64" height="64"><path fill="currentColor" d="M17,17H7V7H17M21,11V9H19V7C19,5.89 18.1,5 17,5H15V3H13V5H11V3H9V5H7C5.89,5 5,5.89 5,7V9H3V11H5V13H3V15H5V17A2,2 0 0,0 7,19H9V21H11V19H13V21H15V19H17A2,2 0 0,0 19,17V15H21V13H19V11M13,13H11V11H13M15,9H9V15H15V9Z"/></svg>
+                    {% else %}
+                    <svg viewBox="0 0 24 24" width="64" height="64"><path fill="currentColor" d="M11,18H13V16H11V18M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,20C7.59,20 4,16.41 4,12C4,7.59 7.59,4 12,4C16.41,4 20,7.59 20,12C20,16.41 16.41,20 12,20M12,6A4,4 0 0,0 8,10H10A2,2 0 0,1 12,8A2,2 0 0,1 14,10C14,12 11,11.75 11,15H13C13,12.75 16,12.5 16,10A4,4 0 0,0 12,6Z"/></svg>
+                    {% endif %}
+                </div>
+                <div class="classification-text">{{ classification.replace('_', ' ').title() }}</div>
+                <div class="confidence-badge">{{ result.get('confidence', 'unknown')|capitalize }} Confidence</div>
+            </div>
+
+            <div class="probability-bar">
+                <div class="prob-label">Human</div>
+                <div class="prob-bar-container">
+                    <div class="prob-bar human-bar" style="width: {{ (1 - ai_prob) * 100 }}%"></div>
+                    <div class="prob-bar ai-bar" style="width: {{ ai_prob * 100 }}%"></div>
+                </div>
+                <div class="prob-label">AI</div>
+            </div>
+            <div class="prob-values">
+                <span>{{ "%.1f%%"|format((1 - ai_prob) * 100) }}</span>
+                <span>{{ "%.1f%%"|format(ai_prob * 100) }}</span>
+            </div>
+        </div>
+
+        <div class="indicators-grid">
+            {% if result.get('human_markers') %}
+            <div class="card human-indicators">
+                <h2>Human Indicators</h2>
+                <ul class="indicator-list">
+                    {% for marker in result.human_markers[:10] %}
+                    <li><span class="indicator-icon human">&#10003;</span> {{ marker }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            {% if result.get('ai_markers') %}
+            <div class="card ai-indicators">
+                <h2>AI Indicators</h2>
+                <ul class="indicator-list">
+                    {% for marker in result.ai_markers[:10] %}
+                    <li><span class="indicator-icon ai">!</span> {{ marker }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="card">
+            <h2>Detection Details</h2>
+            <dl class="info-list">
+                {% if result.get('perplexity') %}
+                <div>
+                    <dt>Perplexity Score</dt>
+                    <dd>{{ "%.2f"|format(result.perplexity) }}</dd>
+                </div>
+                {% endif %}
+                {% if result.get('burstiness') %}
+                <div>
+                    <dt>Burstiness</dt>
+                    <dd>{{ "%.4f"|format(result.burstiness) }}</dd>
+                </div>
+                {% endif %}
+                {% if result.get('vocabulary_variance') %}
+                <div>
+                    <dt>Vocabulary Variance</dt>
+                    <dd>{{ "%.4f"|format(result.vocabulary_variance) }}</dd>
+                </div>
+                {% endif %}
+            </dl>
+        </div>
+    </div>
+</div>
+{% endblock %}

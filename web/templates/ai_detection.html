@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}AI Detection{% endblock %}
+
+{% block content %}
+<div class="page">
+    <header class="page-header">
+        <h1>AI Detection</h1>
+        <p class="subtitle">Detect if text is AI-generated or human-written</p>
+    </header>
+
+    <div class="card">
+        <form method="POST" class="form">
+            <div class="form-group">
+                <label for="text">Text to Analyze <span class="required">*</span></label>
+                <textarea id="text" name="text" rows="12" required placeholder="Paste the text you want to check for AI generation (minimum 50 characters)"></textarea>
+                <span class="help-text">Longer texts produce more accurate results. Minimum 50 characters required.</span>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Detect AI</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card info-card">
+        <h2>How It Works</h2>
+        <p>This tool analyzes stylometric features that differ between AI-generated and human-written text:</p>
+        <ul>
+            <li><strong>Punctuation Consistency:</strong> AI tends to be more consistent in punctuation patterns</li>
+            <li><strong>Vocabulary Distribution:</strong> AI often has flatter vocabulary distributions</li>
+            <li><strong>Phrase Patterns:</strong> AI may repeat similar structures more frequently</li>
+            <li><strong>Hesitation Markers:</strong> Humans naturally use filler words and hesitations</li>
+            <li><strong>Cognitive Load:</strong> Human writing shows signs of fatigue and variation</li>
+        </ul>
+        <p class="disclaimer">Note: AI detection is probabilistic and not 100% accurate. Use results as one data point among many.</p>
+    </div>
+</div>
+{% endblock %}

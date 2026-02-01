@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Seshat{% endblock %} - Stylometric Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="{{ url_for('index') }}">Seshat</a>
+            <span class="nav-tagline">Stylometric Analysis</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a></li>
+            <li><a href="{{ url_for('profiles_list') }}" class="{% if 'profile' in request.endpoint %}active{% endif %}">Profiles</a></li>
+            <li><a href="{{ url_for('analyze') }}" class="{% if 'analyze' in request.endpoint %}active{% endif %}">Analyze</a></li>
+            <li><a href="{{ url_for('compare') }}" class="{% if request.endpoint == 'compare' %}active{% endif %}">Compare</a></li>
+            <li><a href="{{ url_for('psychological') }}" class="{% if 'psychological' in request.endpoint %}active{% endif %}">Psychological</a></li>
+            <li><a href="{{ url_for('ai_detection') }}" class="{% if 'ai_detection' in request.endpoint %}active{% endif %}">AI Detection</a></li>
+        </ul>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">
+                        {{ message }}
+                        <button class="alert-close">&times;</button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>Seshat - Stylometric Authorship Attribution & Psychological Profiling</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

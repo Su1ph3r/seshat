@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <header class="page-header">
+        <h1>Seshat Dashboard</h1>
+        <p class="subtitle">Stylometric Authorship Attribution & Psychological Profiling</p>
+    </header>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ profile_count }}</div>
+            <div class="stat-label">Author Profiles</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">50+</div>
+            <div class="stat-label">Stylometric Features</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">5</div>
+            <div class="stat-label">Personality Traits</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">3</div>
+            <div class="stat-label">Analysis Modules</div>
+        </div>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="card">
+            <h2>Quick Actions</h2>
+            <div class="action-buttons">
+                <a href="{{ url_for('profile_create') }}" class="btn btn-primary">Create Profile</a>
+                <a href="{{ url_for('analyze') }}" class="btn btn-secondary">Analyze Text</a>
+                <a href="{{ url_for('compare') }}" class="btn btn-secondary">Compare Texts</a>
+                <a href="{{ url_for('psychological') }}" class="btn btn-secondary">Psychological Profile</a>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Recent Profiles</h2>
+            {% if profiles %}
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Samples</th>
+                            <th>Words</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in profiles[:5] %}
+                        <tr>
+                            <td><a href="{{ url_for('profile_view', name=p.name) }}">{{ p.name }}</a></td>
+                            <td>{{ p.sample_count }}</td>
+                            <td>{{ p.total_words }}</td>
+                            <td>{{ p.created_at[:10] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if profiles|length > 5 %}
+                <a href="{{ url_for('profiles_list') }}" class="link-more">View all profiles</a>
+                {% endif %}
+            {% else %}
+                <p class="empty-state">No profiles created yet. <a href="{{ url_for('profile_create') }}">Create your first profile</a></p>
+            {% endif %}
+        </section>
+
+        <section class="card">
+            <h2>Features</h2>
+            <ul class="feature-list">
+                <li>
+                    <strong>Lexical Analysis</strong>
+                    <span>Vocabulary richness, word patterns, type-token ratio</span>
+                </li>
+                <li>
+                    <strong>Syntactic Analysis</strong>
+                    <span>Sentence structure, complexity, parse trees</span>
+                </li>
+                <li>
+                    <strong>Function Words</strong>
+                    <span>Pronoun usage, articles, prepositions</span>
+                </li>
+                <li>
+                    <strong>N-gram Analysis</strong>
+                    <span>Character and word n-grams for fingerprinting</span>
+                </li>
+                <li>
+                    <strong>Psychological Profiling</strong>
+                    <span>Big Five personality, emotional tone, cognitive style</span>
+                </li>
+                <li>
+                    <strong>AI Detection</strong>
+                    <span>Detect AI-generated vs human-written text</span>
+                </li>
+            </ul>
+        </section>
+
+        <section class="card">
+            <h2>About Seshat</h2>
+            <p>Named after the Egyptian goddess of writing, wisdom, and measurement - "She who scribes"</p>
+            <p>Seshat performs stylometric analysis to create unique "writing fingerprints" from text samples, enabling authorship attribution and psychological profiling based on linguistic markers.</p>
+            <h3>Use Cases</h3>
+            <ul>
+                <li>Authorship verification and attribution</li>
+                <li>Psychological profiling from text</li>
+                <li>AI-generated content detection</li>
+                <li>Cross-platform author linking</li>
+                <li>Forensic text analysis</li>
+            </ul>
+        </section>
+    </div>
+</div>
+{% endblock %}
