@@ -37,11 +37,13 @@ class AIDetector:
 
     def _define_cognitive_markers(self) -> List[str]:
         """Define markers of cognitive load (more common in human writing)."""
+        # Note: Exclude "so" as it's often used formally
         return [
             "actually", "basically", "honestly", "literally", "obviously",
             "clearly", "simply", "essentially", "i mean", "you know",
             "like", "kind of", "sort of", "i think", "i guess",
-            "well", "so", "anyway", "right", "okay",
+            "well", "anyway", "right", "okay", "sure", "yeah", "yep",
+            "pretty much", "just like", "you see", "look", "listen",
         ]
 
     def _define_hesitation_markers(self) -> List[str]:
@@ -74,64 +76,112 @@ class AIDetector:
         words = tokenize_words(text)
         sentences = tokenize_sentences(text)
 
-        indicators = []
         human_markers = []
         ai_markers = []
 
+        # Start with slight AI bias for formal text (AI tends toward formality)
         ai_score = 0.5
 
+        # Check for formality level - formal text starts with higher AI suspicion
+        formality = self._analyze_formality(text, words)
+        if formality["is_formal"]:
+            ai_score += 0.15
+            ai_markers.append("Formal academic tone")
+
+        # Analyze cognitive load markers (filler words, hedging)
         cognitive_results = self._analyze_cognitive_markers(text, words)
-        if cognitive_results["ratio"] < 0.01:
-            ai_score += 0.1
+        if cognitive_results["ratio"] < 0.005:
+            ai_score += 0.15  # Increased from 0.1
+            ai_markers.append("No cognitive load markers")
+        elif cognitive_results["ratio"] < 0.01:
+            ai_score += 0.08
             ai_markers.append("Low cognitive load markers")
         elif cognitive_results["ratio"] > 0.03:
-            ai_score -= 0.1
+            ai_score -= 0.15  # Increased from 0.1
             human_markers.append("Natural cognitive load markers present")
 
+        # Analyze typos and errors (humans make typos, AI rarely does)
+        error_results = self._analyze_errors(text, words)
+        if error_results["has_typos"]:
+            ai_score -= 0.12
+            human_markers.append("Contains typos/errors")
+        elif len(words) > 30:
+            # Longer text with zero errors is suspicious
+            ai_score += 0.12
+            ai_markers.append("Perfect spelling/grammar in longer text")
+
+        # Analyze sentence consistency
         consistency_results = self._analyze_consistency(text, words, sentences)
-        if consistency_results["punctuation_consistency"] > 0.9:
-            ai_score += 0.08
-            ai_markers.append("Unnaturally consistent punctuation")
+        if consistency_results["sentence_length_cv"] < 0.15:
+            ai_score += 0.12  # Increased from 0.05
+            ai_markers.append("Unnaturally consistent sentence lengths")
+        elif consistency_results["sentence_length_cv"] > 0.5:
+            ai_score -= 0.08
+            human_markers.append("Natural sentence length variation")
 
-        if consistency_results["sentence_length_cv"] < 0.2:
-            ai_score += 0.05
-            ai_markers.append("Very consistent sentence lengths")
-
+        # Analyze vocabulary distribution (burstiness)
         vocab_results = self._analyze_vocabulary_distribution(words)
-        if vocab_results["distribution_flatness"] > 0.7:
-            ai_score += 0.1
+        if vocab_results["distribution_flatness"] > 0.75:
+            ai_score += 0.12  # Increased from 0.1
             ai_markers.append("Flat vocabulary distribution")
 
-        if vocab_results["hapax_ratio"] < 0.3:
-            ai_score += 0.05
+        if vocab_results["hapax_ratio"] < 0.25:
+            ai_score += 0.08  # Increased from 0.05
             ai_markers.append("Low hapax legomena ratio")
 
+        # Analyze repetitive structures
         repetition_results = self._analyze_repetition(text, sentences)
-        if repetition_results["phrase_repetition"] > 0.15:
+        if repetition_results["phrase_repetition"] > 0.1:
             ai_score += 0.1
-            ai_markers.append("High phrase repetition")
+            ai_markers.append("Repetitive phrase structures")
 
+        # Analyze transition patterns (AI uses more formal transitions)
+        transition_results = self._analyze_transitions(text)
+        if transition_results["formal_transition_ratio"] > 0.02:
+            ai_score += 0.1
+            ai_markers.append("Heavy use of formal transitions")
+
+        # Analyze personality markers
         personality_results = self._analyze_personality_markers(text, words)
-        if personality_results["emotional_inconsistency"]:
+        # Only strong first-person (>8%) with informal tone suggests human
+        if personality_results["first_person_ratio"] > 0.08 and not formality["is_formal"]:
+            ai_score -= 0.08
+            human_markers.append("Strong first-person voice")
+        elif personality_results["first_person_ratio"] < 0.005:
             ai_score += 0.05
-            ai_markers.append("Emotional tone inconsistency")
+            ai_markers.append("Impersonal/third-person style")
 
-        if personality_results["first_person_ratio"] > 0.03:
-            ai_score -= 0.05
-            human_markers.append("Natural first-person usage")
+        # Analyze contractions (humans use more contractions)
+        contraction_results = self._analyze_contractions(text)
+        if contraction_results["contraction_ratio"] > 0.02:
+            ai_score -= 0.1
+            human_markers.append("Natural contraction usage")
+        elif contraction_results["contraction_ratio"] < 0.005 and len(words) > 50:
+            ai_score += 0.08
+            ai_markers.append("Avoids contractions")
+
+        # Analyze AI-typical sentence patterns
+        ai_patterns = self._analyze_ai_patterns(text)
+        if ai_patterns["pattern_count"] >= 2:
+            ai_score += 0.15
+            ai_markers.append("Multiple AI-typical patterns detected")
+        elif ai_patterns["pattern_count"] == 1:
+            ai_score += 0.08
+            ai_markers.append("AI-typical sentence pattern detected")
 
         ai_score = max(0, min(1, ai_score))
 
-        if ai_score > 0.7:
+        # Classification thresholds
+        if ai_score > 0.75:
             classification = "likely_ai"
             confidence = "high" if ai_score > 0.85 else "medium"
-        elif ai_score > 0.55:
+        elif ai_score > 0.6:
             classification = "possibly_ai"
-            confidence = "low"
-        elif ai_score < 0.3:
+            confidence = "medium" if ai_score > 0.68 else "low"
+        elif ai_score < 0.25:
             classification = "likely_human"
             confidence = "high" if ai_score < 0.15 else "medium"
-        elif ai_score < 0.45:
+        elif ai_score < 0.4:
             classification = "possibly_human"
             confidence = "low"
         else:
@@ -146,12 +196,204 @@ class AIDetector:
             "human_markers": human_markers,
             "ai_markers": ai_markers,
             "detailed_analysis": {
+                "formality": formality,
                 "cognitive_markers": cognitive_results,
+                "errors": error_results,
                 "consistency": consistency_results,
                 "vocabulary": vocab_results,
                 "repetition": repetition_results,
+                "transitions": transition_results,
                 "personality": personality_results,
+                "contractions": contraction_results,
+                "ai_patterns": ai_patterns,
             },
+        }
+
+    def _analyze_formality(self, text: str, words: List[str]) -> Dict[str, Any]:
+        """Analyze text formality level."""
+        formal_indicators = [
+            "furthermore", "moreover", "consequently", "therefore", "thus",
+            "additionally", "subsequently", "accordingly", "hence", "whereby",
+            "nevertheless", "nonetheless", "regarding", "concerning", "pertaining",
+            "demonstrates", "indicates", "suggests", "reveals", "establishes",
+            "implementation", "utilization", "optimization", "methodology",
+            "comprehensive", "fundamental", "significant", "substantial",
+        ]
+
+        text_lower = text.lower()
+        formal_count = sum(1 for word in formal_indicators if word in text_lower)
+
+        # Check for passive voice patterns
+        passive_patterns = [" is ", " are ", " was ", " were ", " been ", " being "]
+        passive_count = sum(text_lower.count(p) for p in passive_patterns)
+
+        word_count = len(words)
+        formal_ratio = formal_count / word_count if word_count > 0 else 0
+
+        is_formal = formal_ratio > 0.01 or (passive_count > 3 and formal_count > 0)
+
+        return {
+            "is_formal": is_formal,
+            "formal_word_count": formal_count,
+            "formal_ratio": formal_ratio,
+        }
+
+    def _analyze_errors(self, text: str, words: List[str]) -> Dict[str, Any]:
+        """Analyze typos and errors (humans make more)."""
+        import re
+
+        # Common typos - must be standalone words (word boundaries)
+        typo_words = [
+            "teh", "hte", "adn", "taht", "wiht", "recieve", "seperate",
+            "occured", "untill", "definately", "accomodate", "occurence",
+        ]
+
+        # Informal contractions without apostrophes (typos/informal)
+        informal_contractions = [
+            "youre", "dont", "cant", "wont", "im", "id", "ive",
+            "theyre", "theres", "heres", "wheres", "didnt", "doesnt",
+            "wasnt", "werent", "isnt", "arent", "hasnt", "couldnt",
+            "wouldnt", "shouldnt", "hadnt",
+        ]
+
+        # Informal spellings (intentional but human-like)
+        informal_spellings = [
+            "gonna", "wanna", "gotta", "kinda", "sorta", "lemme", "gimme",
+            "cuz", "bcuz", "bc", "thru", "tho", "nite", "lite",
+            "ur", "u", "r", "w/", "b4", "2day", "2nite",
+        ]
+
+        text_lower = text.lower()
+        words_lower = [w.lower() for w in words]
+        words_set = set(words_lower)
+
+        # Check for typos as standalone words only
+        typo_count = sum(1 for t in typo_words if t in words_set)
+
+        # Check for informal contractions as standalone words
+        informal_contraction_count = sum(1 for c in informal_contractions if c in words_set)
+
+        # Check for informal spellings
+        informal_count = sum(1 for i in informal_spellings if i in words_set)
+
+        # Check for repeated characters (sooooo, nooooo) - must be 3+ repeats
+        repeated_chars = len(re.findall(r'(.)\1{2,}', text_lower))
+
+        # Check for multiple punctuation
+        multi_punct = len(re.findall(r'[!?]{2,}|\.{3,}', text))
+
+        total_errors = typo_count + informal_contraction_count + informal_count
+        has_typos = (total_errors > 0 or repeated_chars > 0 or multi_punct > 0)
+
+        return {
+            "has_typos": has_typos,
+            "typo_count": typo_count,
+            "informal_contraction_count": informal_contraction_count,
+            "informal_spelling_count": informal_count,
+            "repeated_chars": repeated_chars,
+            "multi_punctuation": multi_punct,
+        }
+
+    def _analyze_transitions(self, text: str) -> Dict[str, Any]:
+        """Analyze transition word usage (AI overuses formal transitions)."""
+        formal_transitions = [
+            "furthermore", "moreover", "additionally", "consequently",
+            "subsequently", "therefore", "thus", "hence", "accordingly",
+            "in addition", "as a result", "for instance", "for example",
+            "in conclusion", "to summarize", "in summary", "to conclude",
+            "on the other hand", "in contrast", "conversely", "nevertheless",
+            "nonetheless", "however", "although", "while", "whereas",
+        ]
+
+        text_lower = text.lower()
+        word_count = len(text.split())
+
+        transition_count = sum(1 for t in formal_transitions if t in text_lower)
+        ratio = transition_count / word_count if word_count > 0 else 0
+
+        return {
+            "formal_transition_count": transition_count,
+            "formal_transition_ratio": ratio,
+        }
+
+    def _analyze_ai_patterns(self, text: str) -> Dict[str, Any]:
+        """Detect AI-typical sentence patterns and phrases."""
+        import re
+
+        # Common AI patterns - introductions
+        ai_intro_patterns = [
+            r"\bi believe that\b",
+            r"\bit is important to note\b",
+            r"\bit is worth noting\b",
+            r"\bit should be noted\b",
+            r"\bthis demonstrates\b",
+            r"\bthis suggests\b",
+            r"\bthis indicates\b",
+            r"\bthis reveals\b",
+            r"\bthis highlights\b",
+            r"\bthis underscores\b",
+        ]
+
+        # AI conclusion patterns
+        ai_conclusion_patterns = [
+            r"\bin conclusion\b",
+            r"\bto summarize\b",
+            r"\bin summary\b",
+            r"\bto conclude\b",
+            r"\boverall,\b",
+            r"\bin essence\b",
+            r"\bultimately,\b",
+        ]
+
+        # AI filler phrases
+        ai_filler_patterns = [
+            r"\bthroughout (?:my|the|this)\b",
+            r"\byields significant\b",
+            r"\bleads to (?:personal|professional|significant)\b",
+            r"\bconsistently achieve\b",
+            r"\bfundamental to\b",
+            r"\bdedicated individuals\b",
+            r"\bpursuit of knowledge\b",
+            r"\bpersonal growth\b",
+            r"\bprofessional advancement\b",
+        ]
+
+        text_lower = text.lower()
+
+        intro_count = sum(1 for p in ai_intro_patterns if re.search(p, text_lower))
+        conclusion_count = sum(1 for p in ai_conclusion_patterns if re.search(p, text_lower))
+        filler_count = sum(1 for p in ai_filler_patterns if re.search(p, text_lower))
+
+        total = intro_count + conclusion_count + filler_count
+
+        return {
+            "pattern_count": total,
+            "intro_patterns": intro_count,
+            "conclusion_patterns": conclusion_count,
+            "filler_patterns": filler_count,
+        }
+
+    def _analyze_contractions(self, text: str) -> Dict[str, Any]:
+        """Analyze contraction usage (humans use more contractions)."""
+        contractions = [
+            "i'm", "i've", "i'll", "i'd", "you're", "you've", "you'll", "you'd",
+            "he's", "she's", "it's", "we're", "we've", "we'll", "we'd",
+            "they're", "they've", "they'll", "they'd", "that's", "there's",
+            "here's", "what's", "who's", "how's", "where's", "when's",
+            "isn't", "aren't", "wasn't", "weren't", "hasn't", "haven't",
+            "hadn't", "doesn't", "don't", "didn't", "won't", "wouldn't",
+            "couldn't", "shouldn't", "can't", "let's",
+        ]
+
+        text_lower = text.lower()
+        word_count = len(text.split())
+
+        contraction_count = sum(1 for c in contractions if c in text_lower)
+        ratio = contraction_count / word_count if word_count > 0 else 0
+
+        return {
+            "contraction_count": contraction_count,
+            "contraction_ratio": ratio,
         }
 
     def _analyze_cognitive_markers(
