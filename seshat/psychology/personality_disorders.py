@@ -747,7 +747,7 @@ class PersonalityDisorderIndicators:
             "text_length_chars": len(text),
             "text_length_words": results["text_adequacy"]["word_count"],
             "analyzed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "analyzer_version": "2.0.0",
+            "analyzer_version": "1.0.2",
             "limitations": self._get_forensic_limitations(results),
         }
 
@@ -1759,7 +1759,7 @@ class PersonalityDisorderIndicators:
             "text_length_chars": len(text),
             "text_length_words": results["text_adequacy"]["word_count"],
             "analyzed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "analyzer_version": "2.0.0",
+            "analyzer_version": "1.0.2",
             "features_used": list(original_flags.keys()),
             "limitations": self._get_forensic_limitations(results),
         }

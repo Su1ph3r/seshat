@@ -2,7 +2,7 @@
 
 All notable changes to Seshat are documented in this file.
 
-## [2.0.0] - 2026-02-02
+## [1.0.2] - 2026-02-02
 
 ### Major Features: Personality Disorder Analysis v2.0
 

@@ -4,7 +4,7 @@ Seshat - Stylometric Authorship Attribution & Psychological Profiling Tool
 Named after the Egyptian goddess of writing, wisdom, and measurement - "She who scribes"
 """
 
-__version__ = "0.1.0"
+__version__ = "1.0.2"
 __author__ = "Seshat Contributors"
 
 from seshat.analyzer import Analyzer
