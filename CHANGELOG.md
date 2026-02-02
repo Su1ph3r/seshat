@@ -2,6 +2,78 @@
 
 All notable changes to Seshat are documented in this file.
 
+## [2.0.0] - 2026-02-02
+
+### Major Features: Personality Disorder Analysis v2.0
+
+Complete overhaul of the personality disorder linguistic indicator analysis with 18 new accuracy enhancements across 6 modular layers.
+
+#### Linguistic Layer (`pd_linguistic.py`)
+- Multi-word phrase detection with DSM-5 aligned patterns (e.g., "out to get me", "can't trust anyone")
+- Negation handling with 5-word window radius to properly adjust scores
+- Context window extraction for forensic review of marker occurrences
+- Syntactic pattern analysis (passive voice ratio, sentence complexity, question/exclamation ratios)
+
+#### Calibration Layer (`pd_calibration.py`)
+- Z-score baseline normalization against empirically-derived population means
+- Automatic genre detection (formal, informal, clinical, social_media)
+- Genre-specific score adjustments to reduce false positives
+- Enhanced confidence calibration considering multiple factors
+
+#### Validation Layer (`pd_validation.py`)
+- Cross-disorder discriminant validity checks (flags contradictory patterns like schizoid + histrionic)
+- Minimum viable marker thresholds per disorder
+- Interpersonal circumplex mapping (dominance vs affiliation dimensions)
+- Profile clarity scoring
+
+#### Advanced Metrics (`pd_advanced_metrics.py`)
+- Temporal pattern analysis (past/present/future focus with interpretation)
+- Linguistic complexity metrics (vocabulary sophistication, lexical diversity, readability)
+- Response style indicators (hedging, absolutism, deflection, self-reference, emotional expressiveness)
+
+#### Temporal Analysis (`pd_temporal.py`)
+- Multi-sample series analysis with trend detection
+- Change point identification across text samples
+- Stability scoring and dominant pattern detection
+
+#### Optional ML Layers (`pd_semantic.py`, `pd_classifier.py`)
+- Embedding-based semantic similarity to disorder prototype texts
+- Topic modeling with LDA/NMF and disorder relevance scoring
+- Machine learning classifier with RandomForest/GradientBoosting/Logistic options
+- Secure model persistence with path validation and structure verification
+- Feature extraction with 32 linguistic features for ML classification
+
+### New Files
+- `seshat/psychology/pd_linguistic.py` - Linguistic analysis layer
+- `seshat/psychology/pd_calibration.py` - Score calibration and genre detection
+- `seshat/psychology/pd_validation.py` - Cross-disorder validation
+- `seshat/psychology/pd_advanced_metrics.py` - Advanced linguistic metrics
+- `seshat/psychology/pd_temporal.py` - Temporal series analysis
+- `seshat/psychology/pd_semantic.py` - Embedding and topic modeling
+- `seshat/psychology/pd_classifier.py` - ML classification
+- `seshat/psychology/pd_dictionaries.py` - Linguistic resources and baselines
+
+### New Methods
+- `PersonalityDisorderIndicators.compare()` - Compare two texts for indicator differences
+- `PersonalityDisorderIndicators.analyze_series()` - Analyze multiple texts over time
+- `PersonalityDisorderIndicators.get_enhanced_forensic_report()` - Full analysis with all features
+
+### Security Fixes
+- Added path validation to ML model loading to prevent path traversal
+- Added model structure validation to prevent corrupted file attacks
+- Improved error handling for model persistence operations
+
+### Improvements
+- All features configurable via constructor flags (16 feature flags)
+- Lazy loading for optional dependencies (sentence-transformers, sklearn)
+- Full backward compatibility with v1.0 API
+- Analyzer version updated to "2.0.0"
+
+### Testing
+- 86 tests for personality disorder modules (all passing)
+- 91% code coverage for `personality_disorders.py`
+- 169 total tests across the project
+
 ## [1.0.1] - 2026-02-01
 
 ### Improvements
