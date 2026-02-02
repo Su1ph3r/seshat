@@ -184,6 +184,45 @@ async def compare_texts(input_data: CompareInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class PersonalityDisorderInput(BaseModel):
+    """Input model for personality disorder indicator analysis."""
+    text: str = Field(..., min_length=10, description="Text to analyze")
+    forensic_mode: bool = Field(default=False, description="Enable forensic mode with metadata")
+    case_id: Optional[str] = Field(default=None, description="Case identifier for forensic tracking")
+
+
+@app.post("/api/v1/analyze/personality-disorder-indicators")
+async def personality_disorder_indicators(input_data: PersonalityDisorderInput):
+    """
+    Analyze text for personality disorder linguistic indicators.
+
+    CRITICAL: These are linguistic correlations, NOT clinical diagnoses.
+    For forensic and research use by qualified professionals only.
+
+    Returns analysis of linguistic markers associated with DSM-5 personality
+    disorder clusters (A: Odd/Eccentric, B: Dramatic/Emotional, C: Anxious/Fearful).
+    """
+    from seshat.psychology.personality_disorders import PersonalityDisorderIndicators
+
+    try:
+        analyzer = PersonalityDisorderIndicators()
+
+        if input_data.forensic_mode:
+            result = analyzer.analyze_forensic(
+                input_data.text,
+                case_id=input_data.case_id,
+            )
+        else:
+            result = analyzer.analyze(input_data.text)
+
+        return {
+            "success": True,
+            "analysis": result,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/v1/profiles")
 async def create_profile(profile_data: ProfileCreate):
     """

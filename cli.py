@@ -269,19 +269,21 @@ def compare(file1: str, file2: str, detailed: bool):
 @click.option("--personality", "-p", is_flag=True, help="Show personality analysis")
 @click.option("--emotional", "-e", is_flag=True, help="Show emotional analysis")
 @click.option("--cognitive", "-c", is_flag=True, help="Show cognitive analysis")
+@click.option("--pd-indicators", is_flag=True, help="Show personality disorder indicators (forensic)")
 @click.option("--full", "-f", is_flag=True, help="Show all psychological analyses")
-def psych(file: str, personality: bool, emotional: bool, cognitive: bool, full: bool):
+def psych(file: str, personality: bool, emotional: bool, cognitive: bool, pd_indicators: bool, full: bool):
     """Perform psychological profiling on text."""
     from seshat.psychology.personality import PersonalityAnalyzer
     from seshat.psychology.emotional import EmotionalAnalyzer
     from seshat.psychology.cognitive import CognitiveAnalyzer
+    from seshat.psychology.personality_disorders import PersonalityDisorderIndicators
 
     text = Path(file).read_text(encoding="utf-8")
 
     if full:
-        personality = emotional = cognitive = True
+        personality = emotional = cognitive = pd_indicators = True
 
-    if not (personality or emotional or cognitive):
+    if not (personality or emotional or cognitive or pd_indicators):
         personality = True
 
     console.print(Panel("[bold]Psychological Profile[/bold]", subtitle=file))
@@ -321,6 +323,150 @@ def psych(file: str, personality: bool, emotional: bool, cognitive: bool, full: 
         console.print(f"  Cognitive Complexity: {result.get('cognitive_complexity', 0):.2f}")
         console.print(f"  Time Orientation: {result.get('time_orientation', 'balanced').capitalize()}")
         console.print(f"  Style: {result.get('cognitive_style', 'balanced').capitalize()}")
+
+    if pd_indicators:
+        analyzer = PersonalityDisorderIndicators()
+        result = analyzer.analyze(text)
+
+        console.print("\n[bold]Personality Disorder Indicators (Forensic):[/bold]")
+        console.print(f"  [dim]{result['disclaimer'][:80]}...[/dim]")
+
+        text_adequacy = result["text_adequacy"]
+        confidence_color = "green" if text_adequacy["is_sufficient"] else "yellow"
+        console.print(f"\n  Text Adequacy: [{confidence_color}]{text_adequacy['confidence_tier'].replace('_', ' ').title()}[/{confidence_color}] ({text_adequacy['word_count']} words)")
+
+        console.print("\n  [bold]Cluster Scores:[/bold]")
+        for cluster_name, cluster_data in result["clusters"].items():
+            score = cluster_data["score"]
+            bar_len = int(score * 20)
+            bar = "#" * bar_len + "-" * (20 - bar_len)
+            label = cluster_data["label"]
+            console.print(f"    {label:20} [{bar}] {score:.2f}")
+
+        elevated = [(d, data["score"]) for d, data in result["disorders"].items() if data["score"] >= 0.30]
+        if elevated:
+            elevated.sort(key=lambda x: x[1], reverse=True)
+            console.print("\n  [bold]Elevated Markers:[/bold]")
+            for disorder, score in elevated[:5]:
+                console.print(f"    - {disorder.replace('_', ' ').title()}: {score:.2f}")
+
+        console.print(f"\n  Overall Confidence: {result['confidence'].replace('_', ' ').title()}")
+
+
+@main.command("pd-analyze")
+@click.argument("file", type=click.Path(exists=True))
+@click.option("--detailed", "-d", is_flag=True, help="Show detailed dimension breakdowns")
+@click.option("--forensic", "-f", is_flag=True, help="Enable forensic mode with metadata")
+@click.option("--case-id", default=None, help="Case identifier for forensic tracking")
+@click.option("--json", "output_json", is_flag=True, help="Output as JSON")
+def pd_analyze(file: str, detailed: bool, forensic: bool, case_id: Optional[str], output_json: bool):
+    """Analyze text for personality disorder linguistic indicators (forensic)."""
+    import json
+    from seshat.psychology.personality_disorders import PersonalityDisorderIndicators
+
+    text = Path(file).read_text(encoding="utf-8")
+
+    with console.status("Analyzing for personality disorder indicators..."):
+        analyzer = PersonalityDisorderIndicators()
+        if forensic:
+            result = analyzer.analyze_forensic(text, case_id=case_id)
+        else:
+            result = analyzer.analyze(text)
+
+    if output_json:
+        console.print(json.dumps(result, indent=2, default=str))
+        return
+
+    console.print(Panel("[bold]Personality Disorder Indicator Analysis[/bold]", subtitle=file))
+
+    console.print(f"\n[yellow]{result['disclaimer']}[/yellow]")
+
+    text_adequacy = result["text_adequacy"]
+    confidence_color = "green" if text_adequacy["is_sufficient"] else "red"
+    console.print(f"\n[bold]Text Adequacy:[/bold]")
+    console.print(f"  Word Count: {text_adequacy['word_count']}")
+    console.print(f"  Sufficient: [{confidence_color}]{text_adequacy['is_sufficient']}[/{confidence_color}]")
+    console.print(f"  Confidence Tier: {text_adequacy['confidence_tier'].replace('_', ' ').title()}")
+    if text_adequacy["limitations"]:
+        for limitation in text_adequacy["limitations"]:
+            console.print(f"  [dim]- {limitation}[/dim]")
+
+    console.print("\n[bold]Cluster Analysis:[/bold]")
+    cluster_table = Table()
+    cluster_table.add_column("Cluster", style="cyan")
+    cluster_table.add_column("Score", justify="right")
+    cluster_table.add_column("Interpretation")
+    cluster_table.add_column("Disorders")
+
+    for cluster_name, cluster_data in result["clusters"].items():
+        cluster_table.add_row(
+            cluster_data["label"],
+            f"{cluster_data['score']:.3f}",
+            cluster_data["interpretation"].title(),
+            ", ".join(d.replace("_", " ").title() for d in cluster_data["disorders"]),
+        )
+    console.print(cluster_table)
+
+    console.print("\n[bold]Individual Disorder Markers:[/bold]")
+    disorder_table = Table()
+    disorder_table.add_column("Disorder", style="cyan")
+    disorder_table.add_column("Score", justify="right")
+    disorder_table.add_column("Interpretation")
+
+    sorted_disorders = sorted(
+        result["disorders"].items(),
+        key=lambda x: x[1]["score"],
+        reverse=True
+    )
+
+    for disorder_name, disorder_data in sorted_disorders:
+        score = disorder_data["score"]
+        if score >= 0.50:
+            score_style = "red"
+        elif score >= 0.30:
+            score_style = "yellow"
+        else:
+            score_style = "green"
+
+        disorder_table.add_row(
+            disorder_name.replace("_", " ").title(),
+            f"[{score_style}]{score:.3f}[/{score_style}]",
+            disorder_data["interpretation"].title(),
+        )
+    console.print(disorder_table)
+
+    if detailed:
+        console.print("\n[bold]Detailed Dimension Breakdowns:[/bold]")
+        for disorder_name, disorder_data in sorted_disorders:
+            if disorder_data["score"] >= 0.15:
+                console.print(f"\n  [cyan]{disorder_name.replace('_', ' ').title()}:[/cyan]")
+                for key, value in disorder_data.items():
+                    if key.endswith("_ratio"):
+                        dimension = key.replace("_ratio", "").replace("_", " ").title()
+                        console.print(f"    {dimension}: {value:.4f}")
+
+    validation = result["validation"]
+    console.print("\n[bold]Validation:[/bold]")
+    console.print(f"  Feature Coverage: {validation['feature_coverage']:.1%}")
+    console.print(f"  Internally Consistent: {'Yes' if validation['is_consistent'] else 'No'}")
+    if validation["flags"]:
+        console.print("  [yellow]Flags:[/yellow]")
+        for flag in validation["flags"]:
+            console.print(f"    - {flag}")
+
+    if forensic and "forensic_metadata" in result:
+        meta = result["forensic_metadata"]
+        console.print("\n[bold]Forensic Metadata:[/bold]")
+        console.print(f"  Case ID: {meta['case_id'] or 'Not specified'}")
+        console.print(f"  Text Hash (SHA-256): {meta['text_hash'][:16]}...")
+        console.print(f"  Analyzed At: {meta['analyzed_at']}")
+        console.print(f"  Analyzer Version: {meta['analyzer_version']}")
+        if meta["limitations"]:
+            console.print("  [yellow]Limitations:[/yellow]")
+            for limitation in meta["limitations"]:
+                console.print(f"    - {limitation}")
+
+    console.print(f"\n[bold]Overall Confidence:[/bold] {result['confidence'].replace('_', ' ').title()}")
 
 
 @main.command("ai-detect")

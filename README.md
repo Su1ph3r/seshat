@@ -11,6 +11,7 @@ A comprehensive Python library for stylometric analysis that creates "writing fi
 ### Core Capabilities
 - **Authorship Attribution** - Compare unknown texts against author profiles with statistical confidence scoring
 - **Psychological Profiling** - Big Five (OCEAN) personality trait analysis from linguistic markers
+- **Personality Disorder Indicators** - DSM-5 cluster analysis for forensic linguistics (A: Odd/Eccentric, B: Dramatic/Emotional, C: Anxious/Fearful)
 - **AI Detection** - Distinguish human-written content from AI-generated text
 - **Cross-Platform Analysis** - Track writing consistency across different platforms
 
@@ -133,6 +134,31 @@ cognitive = CognitiveAnalyzer().analyze(text)
 print(f"Analytical score: {cognitive['analytical_score']:.2f}")
 ```
 
+### Personality Disorder Indicators (Forensic)
+
+```python
+from seshat.psychology.personality_disorders import PersonalityDisorderIndicators
+
+# CRITICAL: These are linguistic correlations only, NOT clinical diagnoses
+# For forensic and research use by qualified professionals only
+
+analyzer = PersonalityDisorderIndicators()
+result = analyzer.analyze(text)
+
+# Cluster scores (DSM-5 clusters)
+print(f"Cluster A (Odd/Eccentric): {result['clusters']['cluster_a']['score']:.2f}")
+print(f"Cluster B (Dramatic/Emotional): {result['clusters']['cluster_b']['score']:.2f}")
+print(f"Cluster C (Anxious/Fearful): {result['clusters']['cluster_c']['score']:.2f}")
+
+# Individual disorder markers
+for disorder, data in result['disorders'].items():
+    print(f"{disorder}: {data['score']:.2f} ({data['interpretation']})")
+
+# Forensic mode with chain-of-custody metadata
+forensic_result = analyzer.analyze_forensic(text, case_id="CASE-2024-001")
+print(f"Text hash: {forensic_result['forensic_metadata']['text_hash']}")
+```
+
 ### AI Detection
 
 ```python
@@ -159,6 +185,12 @@ python cli.py compare unknown.txt --profiles ./profiles/
 
 # Psychological profiling
 python cli.py psych document.txt --full
+
+# Psychological profiling with personality disorder indicators
+python cli.py psych document.txt --pd-indicators
+
+# Detailed forensic personality disorder analysis
+python cli.py pd-analyze document.txt --detailed --forensic --case-id "CASE-001"
 
 # AI detection
 python cli.py ai-detect suspicious.txt
@@ -195,6 +227,7 @@ python -m api.app
 | GET | `/api/v1/profiles/{id}` | Get profile details |
 | POST | `/api/v1/analyze` | Analyze text |
 | POST | `/api/v1/compare` | Compare text to profile |
+| POST | `/api/v1/analyze/personality-disorder-indicators` | Forensic PD linguistic indicators |
 | DELETE | `/api/v1/profiles/{id}` | Delete profile |
 
 ## Project Structure
@@ -214,7 +247,8 @@ seshat/
 │   │   ├── personality.py # Big Five traits
 │   │   ├── emotional.py   # Emotional tone
 │   │   ├── cognitive.py   # Thinking style
-│   │   └── mental_health.py # Mental health indicators
+│   │   ├── mental_health.py # Mental health indicators
+│   │   └── personality_disorders.py # DSM-5 cluster indicators (forensic)
 │   ├── advanced/          # Advanced analysis
 │   │   ├── ai_detection.py
 │   │   ├── temporal.py

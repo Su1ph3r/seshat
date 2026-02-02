@@ -7,6 +7,7 @@ from seshat.psychology.emotional import EmotionalAnalyzer
 from seshat.psychology.cognitive import CognitiveAnalyzer
 from seshat.psychology.social import SocialAnalyzer
 from seshat.psychology.mental_health import MentalHealthIndicators
+from seshat.psychology.personality_disorders import PersonalityDisorderIndicators
 
 __all__ = [
     "PersonalityAnalyzer",
@@ -14,4 +15,5 @@ __all__ = [
     "CognitiveAnalyzer",
     "SocialAnalyzer",
     "MentalHealthIndicators",
+    "PersonalityDisorderIndicators",
 ]
