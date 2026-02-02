@@ -5,14 +5,18 @@ All notable changes to Seshat are documented in this file.
 ## [1.0.1] - 2026-02-01
 
 ### Improvements
-- Significantly improved AI text detection accuracy (65% → 100% for AI-generated text)
-- Added AI-typical pattern detection (intro/conclusion/filler phrases)
-- Added perfect spelling penalty for longer text samples
-- Improved cognitive marker detection by removing formal transition words
+- Significantly improved AI text detection accuracy (65% → 75-100% for AI-generated text)
+- Added AI-specific phrase detection (distinguishes AI patterns from common formal phrases)
+- Added human authenticity marker detection (quoted speech, specific names/dates, hedging, personal anecdotes, academic methodology references)
+- Reduced false positive rate for formal human writing (academic papers, professional emails, news articles)
+- Improved cognitive marker detection with context-aware weighting
+- Added academic-specific authenticity markers (citations, methodology language, study references)
 
 ### Bug Fixes
 - Fixed false positive in typo detection caused by substring matching (now uses word boundaries)
 - Fixed first-person pronoun scoring to account for formal academic AI writing style
+- Fixed vocabulary distribution scoring to require longer text before penalizing
+- Fixed formal transition detection to require higher thresholds
 
 ## [1.0.0] - 2026-02-01
 

@@ -82,23 +82,28 @@ class AIDetector:
         # Start with slight AI bias for formal text (AI tends toward formality)
         ai_score = 0.5
 
-        # Check for formality level - formal text starts with higher AI suspicion
+        # Check for formality level - formal text has slight AI suspicion
+        # (reduced from 0.15 - formal writing is common for humans too)
         formality = self._analyze_formality(text, words)
-        if formality["is_formal"]:
-            ai_score += 0.15
-            ai_markers.append("Formal academic tone")
+        if formality["is_formal"] and formality["formal_ratio"] > 0.03:
+            ai_score += 0.08
+            ai_markers.append("Highly formal academic tone")
+        elif formality["is_formal"]:
+            ai_score += 0.04
+            ai_markers.append("Formal tone")
 
         # Analyze cognitive load markers (filler words, hedging)
+        # Note: formal human writing also lacks these, so weight is reduced
         cognitive_results = self._analyze_cognitive_markers(text, words)
         if cognitive_results["ratio"] < 0.005:
-            ai_score += 0.15  # Increased from 0.1
+            ai_score += 0.06  # Reduced - formal humans also avoid fillers
             ai_markers.append("No cognitive load markers")
-        elif cognitive_results["ratio"] < 0.01:
-            ai_score += 0.08
-            ai_markers.append("Low cognitive load markers")
         elif cognitive_results["ratio"] > 0.03:
-            ai_score -= 0.15  # Increased from 0.1
+            ai_score -= 0.15
             human_markers.append("Natural cognitive load markers present")
+        elif cognitive_results["ratio"] > 0.015:
+            ai_score -= 0.08
+            human_markers.append("Some cognitive load markers")
 
         # Analyze typos and errors (humans make typos, AI rarely does)
         error_results = self._analyze_errors(text, words)
@@ -120,13 +125,17 @@ class AIDetector:
             human_markers.append("Natural sentence length variation")
 
         # Analyze vocabulary distribution (burstiness)
+        # Note: Short formal texts can also have flat distributions
         vocab_results = self._analyze_vocabulary_distribution(words)
-        if vocab_results["distribution_flatness"] > 0.75:
-            ai_score += 0.12  # Increased from 0.1
+        if vocab_results["distribution_flatness"] > 0.85 and len(words) > 50:
+            ai_score += 0.08
+            ai_markers.append("Very flat vocabulary distribution")
+        elif vocab_results["distribution_flatness"] > 0.75 and len(words) > 100:
+            ai_score += 0.05
             ai_markers.append("Flat vocabulary distribution")
 
-        if vocab_results["hapax_ratio"] < 0.25:
-            ai_score += 0.08  # Increased from 0.05
+        if vocab_results["hapax_ratio"] < 0.20 and len(words) > 50:
+            ai_score += 0.05
             ai_markers.append("Low hapax legomena ratio")
 
         # Analyze repetitive structures
@@ -136,10 +145,14 @@ class AIDetector:
             ai_markers.append("Repetitive phrase structures")
 
         # Analyze transition patterns (AI uses more formal transitions)
+        # Note: Humans in academic/professional contexts also use transitions
         transition_results = self._analyze_transitions(text)
-        if transition_results["formal_transition_ratio"] > 0.02:
-            ai_score += 0.1
-            ai_markers.append("Heavy use of formal transitions")
+        if transition_results["formal_transition_ratio"] > 0.04:
+            ai_score += 0.08
+            ai_markers.append("Very heavy use of formal transitions")
+        elif transition_results["formal_transition_ratio"] > 0.025:
+            ai_score += 0.04
+            ai_markers.append("Heavy formal transitions")
 
         # Analyze personality markers
         personality_results = self._analyze_personality_markers(text, words)
@@ -162,12 +175,27 @@ class AIDetector:
 
         # Analyze AI-typical sentence patterns
         ai_patterns = self._analyze_ai_patterns(text)
-        if ai_patterns["pattern_count"] >= 2:
+        if ai_patterns["specific_ai_phrases"] >= 2:
             ai_score += 0.15
-            ai_markers.append("Multiple AI-typical patterns detected")
-        elif ai_patterns["pattern_count"] == 1:
-            ai_score += 0.08
-            ai_markers.append("AI-typical sentence pattern detected")
+            ai_markers.append("Multiple AI-specific phrases detected")
+        elif ai_patterns["specific_ai_phrases"] == 1:
+            ai_score += 0.10
+            ai_markers.append("AI-specific phrase detected")
+        elif ai_patterns["pattern_count"] >= 2:
+            ai_score += 0.05
+            ai_markers.append("Multiple formal patterns")
+
+        # Analyze human authenticity markers
+        authenticity = self._analyze_human_authenticity(text)
+        if authenticity["authenticity_score"] >= 3:
+            ai_score -= 0.20
+            human_markers.append("Strong human authenticity markers")
+        elif authenticity["authenticity_score"] >= 2:
+            ai_score -= 0.12
+            human_markers.append("Human authenticity markers present")
+        elif authenticity["authenticity_score"] >= 1:
+            ai_score -= 0.06
+            human_markers.append("Some human authenticity markers")
 
         ai_score = max(0, min(1, ai_score))
 
@@ -206,6 +234,7 @@ class AIDetector:
                 "personality": personality_results,
                 "contractions": contraction_results,
                 "ai_patterns": ai_patterns,
+                "authenticity": authenticity,
             },
         }
 
@@ -316,61 +345,153 @@ class AIDetector:
             "formal_transition_ratio": ratio,
         }
 
+    def _analyze_human_authenticity(self, text: str) -> Dict[str, Any]:
+        """Detect markers of authentic human writing (even in formal contexts)."""
+        import re
+
+        authenticity_score = 0
+        markers_found = []
+
+        text_lower = text.lower()
+
+        # Specific details (names, dates, places) - humans include specifics
+        has_quoted_speech = bool(re.search(r'["\'].*?["\'].*?(?:said|told|asked|replied)', text))
+        has_specific_names = bool(re.search(r'\b(?:Mr\.|Mrs\.|Ms\.|Dr\.)\s+[A-Z][a-z]+\b', text))
+        has_specific_times = bool(re.search(r'\b(?:yesterday|last (?:week|month|year)|tomorrow|next (?:week|month))\b', text_lower))
+        has_specific_numbers = bool(re.search(r'\b(?:\d{1,3}(?:,\d{3})*|\d+%|500|\$\d+)\b', text))
+
+        if has_quoted_speech:
+            authenticity_score += 1
+            markers_found.append("quoted_speech")
+        if has_specific_names:
+            authenticity_score += 1
+            markers_found.append("specific_names")
+        if has_specific_times:
+            authenticity_score += 1
+            markers_found.append("specific_times")
+        if has_specific_numbers:
+            authenticity_score += 0.5
+            markers_found.append("specific_numbers")
+
+        # Self-correction and uncertainty (humans hedge and self-correct)
+        hedging_patterns = [
+            r"\bi'?m not (?:sure|certain)\b",
+            r"\bmaybe\b",
+            r"\bperhaps\b",
+            r"\bi think\b",
+            r"\bi guess\b",
+            r"\bprobably\b",
+            r"\bmight be\b",
+            r"\bcould be\b",
+            r"\bor rather\b",
+            r"\bwell,? actually\b",
+            r"\bi mean\b",
+        ]
+        hedging_count = sum(1 for p in hedging_patterns if re.search(p, text_lower))
+        if hedging_count >= 2:
+            authenticity_score += 1
+            markers_found.append("hedging_language")
+        elif hedging_count == 1:
+            authenticity_score += 0.5
+            markers_found.append("some_hedging")
+
+        # Personal anecdotes and experiences
+        anecdote_patterns = [
+            r"\bwhen i was\b",
+            r"\bi remember\b",
+            r"\bonce i\b",
+            r"\bmy (?:friend|colleague|boss|wife|husband|mom|dad)\b",
+            r"\bi've (?:seen|heard|noticed|found)\b",
+            r"\bhappened to me\b",
+        ]
+        anecdote_count = sum(1 for p in anecdote_patterns if re.search(p, text_lower))
+        if anecdote_count >= 1:
+            authenticity_score += 1
+            markers_found.append("personal_anecdotes")
+
+        # Conversational asides and parentheticals
+        has_parenthetical = bool(re.search(r'\([^)]{5,50}\)', text))
+        has_dash_aside = bool(re.search(r' - [^-]{5,50} - ', text))
+        if has_parenthetical or has_dash_aside:
+            authenticity_score += 0.5
+            markers_found.append("parenthetical_asides")
+
+        # Academic specifics (citations, methodology details)
+        has_citation = bool(re.search(r'\(\d{4}\)|\bet al\.|\bfig(?:ure)?\.?\s*\d', text_lower))
+        has_methodology = bool(re.search(r'\bwe (?:used|employed|conducted|analyzed|collected|measured|observed|found|examined|investigated|studied|surveyed|tested|sampled)\b', text_lower))
+        has_data_reference = bool(re.search(r'\b(?:table|figure|appendix|section)\s+\d', text_lower))
+        has_study_reference = bool(re.search(r'\b(?:this|our|the) (?:study|research|analysis|investigation|findings?|results?)\b', text_lower))
+        if has_citation or has_methodology or has_data_reference:
+            authenticity_score += 1
+            markers_found.append("academic_specifics")
+        elif has_study_reference:
+            authenticity_score += 0.5
+            markers_found.append("study_reference")
+
+        # Acknowledging limitations or uncertainty (humans do this more)
+        has_limitations = bool(re.search(r'\b(?:however|although|while|but|yet|still|despite)\b.*\b(?:limit|caveat|note|acknowledg|recogniz)\b', text_lower))
+        if has_limitations:
+            authenticity_score += 0.5
+            markers_found.append("acknowledges_limitations")
+
+        return {
+            "authenticity_score": authenticity_score,
+            "markers_found": markers_found,
+        }
+
     def _analyze_ai_patterns(self, text: str) -> Dict[str, Any]:
         """Detect AI-typical sentence patterns and phrases."""
         import re
 
-        # Common AI patterns - introductions
-        ai_intro_patterns = [
-            r"\bi believe that\b",
-            r"\bit is important to note\b",
-            r"\bit is worth noting\b",
-            r"\bit should be noted\b",
+        # Highly specific AI phrases (rarely used by humans even formally)
+        # These are very specific combinations that AI produces but humans rarely use
+        ai_specific_phrases = [
+            r"\byields significant (?:returns|benefits|results|improvements)\b",
+            r"\bleads to (?:personal growth|professional advancement|significant)\b",
+            r"\bdedicated individuals consistently\b",
+            r"\bpursuit of knowledge leads\b",
+            r"\bfundamental to (?:success|achieving|our)\b",
+            r"\bcannot be (?:overstated|understated)\b",
+            r"\bit is (?:important|essential|crucial|worth) (?:to note|noting) that\b",
+            r"\bin today'?s (?:rapidly changing|fast-paced|modern|digital) world\b",
+            r"\bdemonstrates? (?:our|a) commitment to\b",
+            r"\bproactive measures to\b",
+            r"\bboth a \w+ (?:imperative|necessity) and a \w+ (?:imperative|necessity)\b",
+            r"\bembrace (?:sustainability|change|innovation)\b",
+            r"\bmoral imperative\b",
+            r"\bpractical necessity\b",
+            r"\binvesting in \w+ yields\b",
+            r"\bconsistently achieve their goals\b",
+        ]
+
+        # Generic patterns (common in formal writing, less weight)
+        generic_formal_patterns = [
+            r"\bin conclusion,?\b",
+            r"\bfurthermore,?\b",
             r"\bthis demonstrates\b",
             r"\bthis suggests\b",
-            r"\bthis indicates\b",
-            r"\bthis reveals\b",
-            r"\bthis highlights\b",
-            r"\bthis underscores\b",
-        ]
-
-        # AI conclusion patterns
-        ai_conclusion_patterns = [
-            r"\bin conclusion\b",
-            r"\bto summarize\b",
-            r"\bin summary\b",
-            r"\bto conclude\b",
-            r"\boverall,\b",
-            r"\bin essence\b",
-            r"\bultimately,\b",
-        ]
-
-        # AI filler phrases
-        ai_filler_patterns = [
-            r"\bthroughout (?:my|the|this)\b",
-            r"\byields significant\b",
-            r"\bleads to (?:personal|professional|significant)\b",
-            r"\bconsistently achieve\b",
-            r"\bfundamental to\b",
-            r"\bdedicated individuals\b",
-            r"\bpursuit of knowledge\b",
-            r"\bpersonal growth\b",
-            r"\bprofessional advancement\b",
         ]
 
         text_lower = text.lower()
 
-        intro_count = sum(1 for p in ai_intro_patterns if re.search(p, text_lower))
-        conclusion_count = sum(1 for p in ai_conclusion_patterns if re.search(p, text_lower))
-        filler_count = sum(1 for p in ai_filler_patterns if re.search(p, text_lower))
+        # Count highly specific AI phrases (strong signal)
+        specific_count = sum(1 for p in ai_specific_phrases if re.search(p, text_lower))
 
-        total = intro_count + conclusion_count + filler_count
+        # Count generic formal patterns (weak signal)
+        generic_count = sum(1 for p in generic_formal_patterns if re.search(p, text_lower))
+
+        # Only count generic patterns if there are also specific ones
+        # or if there are many generic ones together
+        effective_count = specific_count
+        if specific_count > 0:
+            effective_count += generic_count
+        elif generic_count >= 3:
+            effective_count = generic_count // 2  # Reduced weight
 
         return {
-            "pattern_count": total,
-            "intro_patterns": intro_count,
-            "conclusion_patterns": conclusion_count,
-            "filler_patterns": filler_count,
+            "pattern_count": effective_count,
+            "specific_ai_phrases": specific_count,
+            "generic_formal_patterns": generic_count,
         }
 
     def _analyze_contractions(self, text: str) -> Dict[str, Any]:
