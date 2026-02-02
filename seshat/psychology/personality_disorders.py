@@ -7,14 +7,49 @@ For forensic/research use by qualified professionals only.
 
 Based on research correlating language patterns with personality characteristics,
 including work on linguistic markers in clinical populations.
+
+Version 2.0 adds:
+- Phrase-level detection (multi-word patterns)
+- Negation handling
+- Context window extraction
+- Genre detection and adjustment
+- Baseline normalization
+- Cross-disorder validation
+- Interpersonal circumplex mapping
+- Temporal pattern analysis
+- Linguistic complexity metrics
+- Response style indicators
+- Comparison mode
+- Temporal series analysis
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from collections import Counter
 from datetime import datetime, timezone
 import hashlib
 
 from seshat.utils import tokenize_words
+
+# Import enhancement layers
+from .pd_linguistic import PDLinguisticLayer, PhraseMatch, NegatedMarker, ContextWindow
+from .pd_calibration import PDCalibrationLayer, ConfidenceResult, GenreDetectionResult
+from .pd_validation import PDValidationLayer, ValidationResult, CircumplexPosition, ValidationFlags
+from .pd_advanced_metrics import PDAdvancedMetrics, TemporalProfile, ComplexityMetrics, ResponseStyleMetrics
+from .pd_temporal import PDTemporalAnalyzer, TemporalAnalysis, TrendResult
+from .pd_dictionaries import MINIMUM_MARKERS
+
+# Optional layers (require additional dependencies)
+try:
+    from .pd_semantic import PDSemanticLayer, SemanticSimilarityResult, TopicAnalysisResult
+    SEMANTIC_AVAILABLE = True
+except ImportError:
+    SEMANTIC_AVAILABLE = False
+
+try:
+    from .pd_classifier import PDClassifier, PDFeatureExtractor, ClassificationResult
+    CLASSIFIER_AVAILABLE = True
+except ImportError:
+    CLASSIFIER_AVAILABLE = False
 
 
 class PersonalityDisorderIndicators:
@@ -51,9 +86,120 @@ class PersonalityDisorderIndicators:
         "very_high": (2000, float('inf'), "Forensic-grade reliability"),
     }
 
-    def __init__(self):
-        """Initialize personality disorder indicator analyzer."""
+    def __init__(
+        self,
+        # Linguistic layer features
+        use_phrases: bool = True,
+        use_negation: bool = True,
+        use_context: bool = True,
+        use_syntactic: bool = True,
+        # Calibration layer features
+        use_baseline_norm: bool = True,
+        use_genre_detection: bool = True,
+        use_confidence_cal: bool = True,
+        # Validation layer features
+        use_cross_validation: bool = True,
+        use_minimum_markers: bool = True,
+        use_circumplex: bool = True,
+        # Advanced metrics
+        use_temporal: bool = True,
+        use_complexity: bool = True,
+        use_response_style: bool = True,
+        # Optional features (require additional dependencies)
+        use_embeddings: bool = False,
+        use_classifier: bool = False,
+        use_topics: bool = False,
+    ):
+        """
+        Initialize personality disorder indicator analyzer.
+
+        Args:
+            use_phrases: Enable multi-word phrase detection
+            use_negation: Enable negation handling
+            use_context: Enable context window extraction
+            use_syntactic: Enable syntactic pattern analysis (requires spaCy)
+            use_baseline_norm: Enable baseline normalization
+            use_genre_detection: Enable genre detection and adjustment
+            use_confidence_cal: Enable enhanced confidence calibration
+            use_cross_validation: Enable cross-disorder validation
+            use_minimum_markers: Enable minimum marker checks
+            use_circumplex: Enable interpersonal circumplex mapping
+            use_temporal: Enable temporal pattern analysis
+            use_complexity: Enable linguistic complexity metrics
+            use_response_style: Enable response style analysis
+            use_embeddings: Enable embedding-based similarity (requires model)
+            use_classifier: Enable ML classifier layer (requires trained model)
+            use_topics: Enable topic modeling (requires embeddings)
+        """
         self.indicator_words = self._load_disorder_dictionaries()
+
+        # Store feature flags
+        self.use_phrases = use_phrases
+        self.use_negation = use_negation
+        self.use_context = use_context
+        self.use_syntactic = use_syntactic
+        self.use_baseline_norm = use_baseline_norm
+        self.use_genre_detection = use_genre_detection
+        self.use_confidence_cal = use_confidence_cal
+        self.use_cross_validation = use_cross_validation
+        self.use_minimum_markers = use_minimum_markers
+        self.use_circumplex = use_circumplex
+        self.use_temporal = use_temporal
+        self.use_complexity = use_complexity
+        self.use_response_style = use_response_style
+        self.use_embeddings = use_embeddings
+        self.use_classifier = use_classifier
+        self.use_topics = use_topics
+
+        # Initialize layers based on feature flags
+        self._init_layers()
+
+    def _init_layers(self):
+        """Initialize analysis layers based on feature flags."""
+        # Linguistic layer
+        if any([self.use_phrases, self.use_negation, self.use_context, self.use_syntactic]):
+            self.linguistic_layer = PDLinguisticLayer(use_spacy=self.use_syntactic)
+        else:
+            self.linguistic_layer = None
+
+        # Calibration layer
+        if any([self.use_baseline_norm, self.use_genre_detection, self.use_confidence_cal]):
+            self.calibration_layer = PDCalibrationLayer()
+        else:
+            self.calibration_layer = None
+
+        # Validation layer
+        if any([self.use_cross_validation, self.use_minimum_markers, self.use_circumplex]):
+            self.validation_layer = PDValidationLayer()
+        else:
+            self.validation_layer = None
+
+        # Advanced metrics layer
+        if any([self.use_temporal, self.use_complexity, self.use_response_style]):
+            self.advanced_metrics = PDAdvancedMetrics()
+        else:
+            self.advanced_metrics = None
+
+        # Temporal analyzer (for series analysis)
+        self.temporal_analyzer = PDTemporalAnalyzer()
+
+        # Semantic layer (optional - requires sentence-transformers/sklearn)
+        if (self.use_embeddings or self.use_topics) and SEMANTIC_AVAILABLE:
+            self.semantic_layer = PDSemanticLayer(
+                use_embeddings=self.use_embeddings,
+                use_topics=self.use_topics,
+            )
+        else:
+            self.semantic_layer = None
+
+        # Classifier layer (optional - requires sklearn and trained model)
+        if self.use_classifier and CLASSIFIER_AVAILABLE:
+            try:
+                self.classifier = PDClassifier()
+            except ImportError:
+                self.classifier = None
+        else:
+            self.classifier = None
 
     def _load_disorder_dictionaries(self) -> Dict[str, Dict[str, List[str]]]:
         """Load word dictionaries for each personality disorder cluster."""
@@ -294,7 +440,6 @@ class PersonalityDisorderIndicators:
         word_counts = Counter(words)
 
         text_adequacy = self._calculate_text_adequacy(word_count)
-        confidence_tier = text_adequacy["confidence_tier"]
 
         results = {
             "disclaimer": (
@@ -307,6 +452,7 @@ class PersonalityDisorderIndicators:
             "text_adequacy": text_adequacy,
         }
 
+        # === Phase 1: Basic word-level analysis ===
         disorders = {}
         disorders["paranoid"] = self._analyze_paranoid_markers(word_counts, word_count)
         disorders["schizoid"] = self._analyze_schizoid_markers(word_counts, word_count)
@@ -319,13 +465,258 @@ class PersonalityDisorderIndicators:
         disorders["dependent"] = self._analyze_dependent_markers(word_counts, word_count)
         disorders["obsessive_compulsive"] = self._analyze_obsessive_compulsive_markers(word_counts, word_count)
 
-        results["disorders"] = disorders
+        # Extract raw scores for processing
+        raw_scores = {d: data["score"] for d, data in disorders.items()}
 
+        # === Phase 2: Linguistic layer enhancements ===
+        if self.linguistic_layer:
+            # Phrase detection
+            if self.use_phrases:
+                phrase_matches = self.linguistic_layer.detect_phrases(text)
+                phrase_boosts = self.linguistic_layer.get_phrase_score_boost(phrase_matches)
+                results["phrase_matches"] = {
+                    d: [{"phrase": m.phrase, "dimension": m.dimension, "context": m.context}
+                        for m in matches]
+                    for d, matches in phrase_matches.items()
+                }
+                # Apply phrase boosts to scores
+                for disorder, dimensions in phrase_boosts.items():
+                    for dimension, boost in dimensions.items():
+                        raw_scores[disorder] = min(1.0, raw_scores[disorder] + boost)
+
+            # Negation handling
+            if self.use_negation:
+                negated, adjustments = self.linguistic_layer.handle_negation(
+                    text, self.indicator_words
+                )
+                results["negated_markers"] = [
+                    {"marker": n.marker, "negation": n.negation_word, "disorder": n.disorder}
+                    for n in negated
+                ]
+                # Apply negation adjustments
+                for disorder, dimensions in adjustments.items():
+                    for dimension, adjustment in dimensions.items():
+                        # Reduce score when markers are negated
+                        raw_scores[disorder] = max(0.0, raw_scores[disorder] + adjustment * 0.1)
+
+            # Context windows (for forensic use)
+            if self.use_context:
+                context_windows = self.linguistic_layer.extract_context_windows(
+                    text, self.indicator_words
+                )
+                results["context_windows"] = {
+                    d: [{"marker": w.marker, "before": w.before, "after": w.after}
+                        for w in windows]
+                    for d, windows in context_windows.items()
+                }
+
+            # Syntactic patterns
+            if self.use_syntactic:
+                syntactic = self.linguistic_layer.analyze_syntactic_patterns(text)
+                results["syntactic_patterns"] = {
+                    "passive_voice_ratio": syntactic.passive_voice_ratio,
+                    "avg_sentence_length": syntactic.avg_sentence_length,
+                    "question_ratio": syntactic.question_ratio,
+                    "exclamation_ratio": syntactic.exclamation_ratio,
+                    "first_person_ratio": syntactic.first_person_ratio,
+                    "third_person_ratio": syntactic.third_person_ratio,
+                }
+
+        # === Phase 3: Genre detection and calibration ===
+        detected_genre = "neutral"
+        if self.calibration_layer:
+            if self.use_genre_detection:
+                genre_result = self.calibration_layer.detect_genre(text)
+                detected_genre = genre_result.genre
+                results["genre"] = {
+                    "detected": genre_result.genre,
+                    "confidence": genre_result.confidence,
+                    "indicator_counts": genre_result.indicator_counts,
+                }
+                # Apply genre adjustments
+                raw_scores = self.calibration_layer.adjust_for_genre(raw_scores, detected_genre)
+
+            if self.use_baseline_norm:
+                normalized_scores = self.calibration_layer.normalize_scores(raw_scores)
+                results["normalized_scores"] = normalized_scores
+                # Use normalized scores for further processing
+                raw_scores = normalized_scores
+
+        # Update disorder scores with enhanced values
+        for disorder in disorders:
+            disorders[disorder]["score"] = raw_scores[disorder]
+            disorders[disorder]["interpretation"] = self._interpret_score(raw_scores[disorder])
+
+        results["disorders"] = disorders
         results["clusters"] = self._calculate_cluster_scores(disorders)
 
-        results["validation"] = self._validate_feature_coverage(disorders, word_count)
+        # === Phase 4: Validation layer ===
+        validation = self._validate_feature_coverage(disorders, word_count)
 
-        results["confidence"] = self._calculate_confidence(results, word_count)
+        if self.validation_layer:
+            if self.use_cross_validation:
+                discriminant = self.validation_layer.check_discriminant_validity(raw_scores)
+                results["discriminant_validity"] = {
+                    "is_valid": discriminant.is_valid,
+                    "contradictions": [
+                        {"disorder1": c[0], "disorder2": c[1], "score1": c[2], "score2": c[3]}
+                        for c in discriminant.contradictions
+                    ],
+                    "warnings": discriminant.warnings,
+                    "confidence_adjustment": discriminant.confidence_adjustment,
+                }
+                # Merge warnings into validation flags
+                validation["flags"].extend(discriminant.warnings)
+                if not discriminant.is_valid:
+                    validation["is_consistent"] = False
+
+            if self.use_minimum_markers:
+                # Count markers per disorder
+                marker_counts = self.linguistic_layer.count_markers_by_dimension(
+                    text, self.indicator_words
+                ) if self.linguistic_layer else {}
+                total_markers = {
+                    d: sum(dims.values()) for d, dims in marker_counts.items()
+                }
+                marker_checks = self.validation_layer.check_all_minimum_markers(total_markers)
+                results["minimum_markers"] = {
+                    d: {"meets_minimum": check[0], "explanation": check[1]}
+                    for d, check in marker_checks.items()
+                }
+                # Add flags for elevated scores with insufficient markers
+                for disorder, (meets_min, explanation) in marker_checks.items():
+                    if not meets_min and raw_scores.get(disorder, 0) > 0.4:
+                        validation["flags"].append(f"{disorder}: {explanation}")
+
+            if self.use_circumplex:
+                circumplex = self.validation_layer.map_to_circumplex(raw_scores)
+                results["circumplex_position"] = {
+                    "dominance": circumplex.dominance,
+                    "affiliation": circumplex.affiliation,
+                    "quadrant": circumplex.quadrant,
+                    "angle_degrees": circumplex.angle_degrees,
+                    "intensity": circumplex.intensity,
+                }
+
+        results["validation"] = validation
+
+        # === Phase 5: Advanced metrics ===
+        if self.advanced_metrics:
+            if self.use_temporal:
+                temporal = self.advanced_metrics.analyze_temporal_patterns(text)
+                results["temporal_patterns"] = {
+                    "past_focus": temporal.past_focus,
+                    "present_focus": temporal.present_focus,
+                    "future_focus": temporal.future_focus,
+                    "dominant_focus": temporal.dominant_focus,
+                    "interpretation": temporal.interpretation,
+                }
+
+            if self.use_complexity:
+                complexity = self.advanced_metrics.analyze_linguistic_complexity(text)
+                results["linguistic_complexity"] = {
+                    "vocabulary_sophistication": complexity.vocabulary_sophistication,
+                    "lexical_diversity": complexity.lexical_diversity,
+                    "avg_word_length": complexity.avg_word_length,
+                    "avg_sentence_length": complexity.avg_sentence_length,
+                    "readability_score": complexity.readability_score,
+                    "interpretation": complexity.interpretation,
+                }
+
+            if self.use_response_style:
+                response = self.advanced_metrics.analyze_response_style(text)
+                results["response_style"] = {
+                    "hedging_ratio": response.hedging_ratio,
+                    "absolutism_ratio": response.absolutism_ratio,
+                    "deflection_ratio": response.deflection_ratio,
+                    "self_reference_ratio": response.self_reference_ratio,
+                    "emotional_expressiveness": response.emotional_expressiveness,
+                    "certainty_ratio": response.certainty_ratio,
+                    "interpretation": response.interpretation,
+                }
+
+        # === Phase 6: Semantic layer (optional) ===
+        if self.semantic_layer:
+            semantic_results = self.semantic_layer.analyze(text)
+
+            # Add semantic similarity scores
+            if self.use_embeddings and semantic_results.get("semantic_similarity"):
+                results["semantic_similarity"] = semantic_results["semantic_similarity"]
+                # Optionally blend semantic scores with raw scores
+                for disorder, sim_data in semantic_results["semantic_similarity"].items():
+                    if disorder in raw_scores:
+                        # Weight semantic similarity as a factor (0.2 weight)
+                        semantic_boost = sim_data.get("similarity_score", 0.5) - 0.5
+                        raw_scores[disorder] = min(1.0, max(0.0,
+                            raw_scores[disorder] + semantic_boost * 0.2
+                        ))
+
+            # Add topic analysis
+            if self.use_topics and semantic_results.get("topics"):
+                results["topics"] = semantic_results["topics"]
+                results["topic_disorder_weights"] = semantic_results.get("topic_disorder_weights", {})
+                # Apply topic-based adjustments
+                for disorder, weight in semantic_results.get("topic_disorder_weights", {}).items():
+                    if disorder in raw_scores and weight > 0.3:
+                        raw_scores[disorder] = min(1.0, raw_scores[disorder] + weight * 0.1)
+
+            # Update disorder scores with semantic adjustments
+            for disorder in disorders:
+                disorders[disorder]["score"] = raw_scores[disorder]
+                disorders[disorder]["interpretation"] = self._interpret_score(raw_scores[disorder])
+
+        # === Phase 7: ML Classifier (optional) ===
+        if self.classifier and self.classifier.is_trained():
+            try:
+                classifier_results = self.classifier.predict(text)
+                results["classifier_predictions"] = {
+                    d: {
+                        "probability": r.probability,
+                        "confidence": r.confidence,
+                        "contributing_features": [
+                            {"feature": f[0], "contribution": f[1]}
+                            for f in r.contributing_features
+                        ],
+                    }
+                    for d, r in classifier_results.items()
+                }
+                # Optionally blend classifier predictions (if confidence is high)
+                for disorder, pred in classifier_results.items():
+                    if pred.confidence == "high" and disorder in raw_scores:
+                        # Weighted average with classifier (0.3 weight for classifier)
+                        raw_scores[disorder] = (
+                            raw_scores[disorder] * 0.7 + pred.probability * 0.3
+                        )
+                        disorders[disorder]["score"] = raw_scores[disorder]
+                        disorders[disorder]["interpretation"] = self._interpret_score(raw_scores[disorder])
+            except RuntimeError:
+                # Classifier not trained - skip
+                pass
+
+        # === Phase 8: Confidence calibration ===
+        if self.calibration_layer and self.use_confidence_cal:
+            marker_counts_total = {}
+            if self.linguistic_layer:
+                marker_counts_dict = self.linguistic_layer.count_markers_by_dimension(
+                    text, self.indicator_words
+                )
+                marker_counts_total = {d: sum(dims.values()) for d, dims in marker_counts_dict.items()}
+
+            calibrated = self.calibration_layer.calibrate_confidence(
+                raw_scores,
+                validation,
+                word_count,
+                marker_counts_total,
+            )
+            results["calibrated_confidence"] = {
+                "level": calibrated.level,
+                "score": calibrated.score,
+                "factors": calibrated.factors,
+                "explanation": calibrated.explanation,
+            }
+            results["confidence"] = calibrated.level
+        else:
+            results["confidence"] = self._calculate_confidence(results, word_count)
 
         results["summary"] = self._generate_summary(results)
 
@@ -356,7 +747,7 @@ class PersonalityDisorderIndicators:
             "text_length_chars": len(text),
             "text_length_words": results["text_adequacy"]["word_count"],
             "analyzed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-            "analyzer_version": "1.0.0",
+            "analyzer_version": "2.0.0",
             "limitations": self._get_forensic_limitations(results),
         }
 
@@ -1181,3 +1572,196 @@ class PersonalityDisorderIndicators:
             summary[f"{cluster_name}_score"] = cluster_data["score"]
 
         return summary
+
+    def compare(
+        self,
+        text1: str,
+        text2: str,
+        timestamp1: Optional[datetime] = None,
+        timestamp2: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """
+        Compare personality disorder indicators between two texts.
+
+        Args:
+            text1: First text to analyze
+            text2: Second text to analyze
+            timestamp1: Optional timestamp for first text
+            timestamp2: Optional timestamp for second text
+
+        Returns:
+            Dictionary with comparison metrics including:
+            - Per-disorder score differences
+            - Per-cluster score differences
+            - Significant changes
+            - Overall change magnitude
+        """
+        result1 = self.analyze(text1)
+        result2 = self.analyze(text2)
+
+        comparison = self.temporal_analyzer.compare_samples(
+            result1, result2, timestamp1, timestamp2
+        )
+
+        # Add analysis results for reference
+        comparison["text1_analysis"] = result1
+        comparison["text2_analysis"] = result2
+
+        # Generate summary
+        significant = comparison.get("significant_changes", [])
+        if significant:
+            summary_parts = ["Significant changes detected:"]
+            for change in significant[:3]:
+                summary_parts.append(
+                    f"  - {change['disorder']}: {change['direction']} by {abs(change['change']):.2f}"
+                )
+        else:
+            summary_parts = ["No significant changes detected between samples."]
+
+        comparison["summary"] = "\n".join(summary_parts)
+
+        return comparison
+
+    def analyze_series(
+        self,
+        texts: List[str],
+        timestamps: Optional[List[datetime]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Analyze personality disorder indicators across multiple text samples over time.
+
+        Args:
+            texts: List of texts to analyze
+            timestamps: Optional list of timestamps for each text
+
+        Returns:
+            TemporalAnalysis with trend and change point information
+        """
+        if len(texts) < 2:
+            return {
+                "error": "At least 2 text samples required for temporal analysis",
+                "sample_count": len(texts),
+            }
+
+        # Analyze each text
+        results = [self.analyze(text) for text in texts]
+
+        # Perform temporal analysis
+        analysis = self.temporal_analyzer.analyze_series(results, timestamps)
+
+        return {
+            "sample_count": analysis.sample_count,
+            "time_span": analysis.time_span,
+            "disorder_trends": {
+                d: {
+                    "direction": t.direction,
+                    "slope": t.slope,
+                    "r_squared": t.r_squared,
+                    "start_value": t.start_value,
+                    "end_value": t.end_value,
+                    "change_percent": t.change_percent,
+                    "is_significant": t.is_significant,
+                    "interpretation": t.interpretation,
+                }
+                for d, t in analysis.disorder_trends.items()
+            },
+            "cluster_trends": {
+                c: {
+                    "direction": t.direction,
+                    "slope": t.slope,
+                    "change_percent": t.change_percent,
+                    "is_significant": t.is_significant,
+                }
+                for c, t in analysis.cluster_trends.items()
+            },
+            "change_points": [
+                {
+                    "index": cp.index,
+                    "timestamp": cp.timestamp.isoformat() if cp.timestamp else None,
+                    "disorder": cp.disorder,
+                    "before_mean": cp.before_mean,
+                    "after_mean": cp.after_mean,
+                    "change_magnitude": cp.change_magnitude,
+                    "direction": cp.direction,
+                }
+                for cp in analysis.change_points
+            ],
+            "stability_score": analysis.stability_score,
+            "dominant_pattern": analysis.dominant_pattern,
+            "interpretation": analysis.interpretation,
+            "individual_results": results,
+        }
+
+    def get_enhanced_forensic_report(
+        self,
+        text: str,
+        case_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate an enhanced forensic report with all analysis layers.
+
+        Args:
+            text: Input text to analyze
+            case_id: Optional case identifier for forensic tracking
+
+        Returns:
+            Comprehensive forensic report with full analysis
+        """
+        # Ensure all features are enabled for forensic analysis
+        original_flags = {
+            "use_phrases": self.use_phrases,
+            "use_negation": self.use_negation,
+            "use_context": self.use_context,
+            "use_syntactic": self.use_syntactic,
+            "use_baseline_norm": self.use_baseline_norm,
+            "use_genre_detection": self.use_genre_detection,
+            "use_confidence_cal": self.use_confidence_cal,
+            "use_cross_validation": self.use_cross_validation,
+            "use_minimum_markers": self.use_minimum_markers,
+            "use_circumplex": self.use_circumplex,
+            "use_temporal": self.use_temporal,
+            "use_complexity": self.use_complexity,
+            "use_response_style": self.use_response_style,
+        }
+
+        # Temporarily enable all features
+        self.use_phrases = True
+        self.use_negation = True
+        self.use_context = True
+        self.use_syntactic = True
+        self.use_baseline_norm = True
+        self.use_genre_detection = True
+        self.use_confidence_cal = True
+        self.use_cross_validation = True
+        self.use_minimum_markers = True
+        self.use_circumplex = True
+        self.use_temporal = True
+        self.use_complexity = True
+        self.use_response_style = True
+
+        # Re-initialize layers
+        self._init_layers()
+
+        # Perform analysis
+        results = self.analyze(text)
+
+        # Restore original flags
+        for flag, value in original_flags.items():
+            setattr(self, flag, value)
+        self._init_layers()
+
+        # Add forensic metadata
+        text_hash = hashlib.sha256(text.encode('utf-8')).hexdigest()
+
+        results["forensic_metadata"] = {
+            "case_id": case_id,
+            "text_hash": text_hash,
+            "text_length_chars": len(text),
+            "text_length_words": results["text_adequacy"]["word_count"],
+            "analyzed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "analyzer_version": "2.0.0",
+            "features_used": list(original_flags.keys()),
+            "limitations": self._get_forensic_limitations(results),
+        }
+
+        return results

@@ -124,3 +124,67 @@ def sample_profile(profile_manager, sample_text, analyzer):
         samples=[sample_text],
     )
     return profile
+
+
+# =============================================================================
+# Personality Disorder Test Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def paranoid_text():
+    """Return text with paranoid markers."""
+    return """
+    They are always watching me, plotting and scheming against me behind my back.
+    I can't trust anyone because everyone is suspicious and deceitful. They all
+    conspire against me and lie to my face. I know they're out to get me. I have
+    to be vigilant because they're targeting me. Everyone is untrustworthy and
+    I must protect myself from their schemes. They blame me for everything but
+    it's really their fault. The world is full of liars and manipulators.
+    """ * 10
+
+
+@pytest.fixture
+def narcissistic_text():
+    """Return text with narcissistic markers."""
+    return """
+    I am the best at everything I do. My achievements are extraordinary and
+    unmatched by anyone else. I deserve special treatment because I am superior
+    to everyone around me. People should recognize my exceptional talents and
+    brilliant ideas. These trivial concerns are beneath me. I am unique and
+    gifted beyond compare. Everyone should admire my accomplishments.
+    """ * 10
+
+
+@pytest.fixture
+def negated_text():
+    """Return text with negated markers."""
+    return """
+    I am not suspicious of anyone. I don't distrust people at all. I'm never
+    worried about being watched. I don't think anyone is plotting against me.
+    I can trust others completely. No one is deceiving me. I'm not vigilant
+    or careful about anything. People are not lying to me.
+    """ * 10
+
+
+@pytest.fixture
+def clinical_text():
+    """Return clinical-style text."""
+    return """
+    Patient presents with symptoms of anxiety and depression. Assessment reveals
+    moderate impairment in functioning. Diagnosis indicates possible adjustment
+    disorder. Treatment plan includes cognitive behavioral therapy and medication
+    evaluation. Prognosis is favorable with appropriate intervention. Mental
+    status examination shows intact orientation and judgment.
+    """ * 10
+
+
+@pytest.fixture
+def social_media_text():
+    """Return social media style text."""
+    return """
+    omg this is literally the best day ever!! #blessed #livingmybestlife
+    just posted a selfie and its trending lol. everyone follow me for more
+    content!! dm me ur thoughts. this is so viral rn. no cap this is lit
+    periodt. stan culture is wild. the vibes are immaculate.
+    """ * 10
