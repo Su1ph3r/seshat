@@ -2,9 +2,9 @@
 
 > *Named after the Egyptian goddess of writing, wisdom, and measurement - "She who scribes"*
 
-**Stylometric Authorship Attribution & Psychological Profiling Tool**
+Stylometric analysis and authorship attribution tool. Creates writing fingerprints from text samples, identifies likely authors, detects AI-generated content, and performs psychological profiling for forensic linguistics and OSINT.
 
-A comprehensive Python library for stylometric analysis that creates "writing fingerprints" from known samples, identifies authorship with confidence scoring, and performs psychological profiling based on linguistic markers.
+A Python library for stylometric analysis that creates "writing fingerprints" from known samples, identifies authorship with confidence scoring, and performs psychological profiling based on linguistic markers.
 
 ## Features
 
@@ -35,7 +35,7 @@ A comprehensive Python library for stylometric analysis that creates "writing fi
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/seshat.git
+git clone https://github.com/Su1ph3r/seshat.git
 cd seshat
 
 # Create virtual environment
